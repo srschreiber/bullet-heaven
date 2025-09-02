@@ -225,12 +225,12 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		// nice VS-ish defaults — tweak live
 		"PixelSize":    float32(2),               // 1..4
 		"Vignette":     float32(0.4),             // 0..1
-		"Grain":        float32(0.1),             // 0..0.4
+		"Grain":        float32(0.2),             // 0..0.4
 		"Bloom":        float32(0.55),            // 0..1
 		"Aberration":   float32(0.0015),          // 0..0.005
 		"Saturation":   float32(.8),              // 0.8..1.3
 		"Contrast":     float32(1.2),             // 0.9..1.2
-		"Gamma":        float32(.9),              // 0.9..1.4
+		"Gamma":        float32(1.2),             // 0.9..1.4
 		"Border":       float32(1.5),             // intensity (try 0.8–1.5)
 		"BorderClamp":  float32(.3),              // max darken (0.15–0.35)
 		"BorderRadius": float32(1.3),             // neighbor distance in px (1–2)

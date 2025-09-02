@@ -223,7 +223,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		"Resolution": []float32{float32(g.ScreenWidth), float32(g.ScreenHeight)},
 
 		// nice VS-ish defaults — tweak live
-		"PixelSize":    float32(0.0),             // 1..4
+		"PixelSize":    float32(2),               // 1..4
 		"Vignette":     float32(0.4),             // 0..1
 		"Grain":        float32(0.1),             // 0..0.4
 		"Bloom":        float32(0.55),            // 0..1

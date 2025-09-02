@@ -134,6 +134,9 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	// set screen background to purple
+	ebitenutil.DrawRect(screen, 0, 0, float64(g.ScreenWidth), float64(g.ScreenHeight), color.RGBA{R: 128, G: 0, B: 128, A: 255})
+
 	// player
 	const w = 16.0
 	ebitenutil.DrawRect(screen, g.Player.Pos.X-w/2, g.Player.Pos.Y-w/2, w, w, color.White)
@@ -148,14 +151,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return 320 * 2, 240 * 2
+	return 320, 240
 }
 
 func main() {
-	ScreenHeight := 320 * 2
-	ScreenWidth := 240 * 2
+	ScreenHeight := 240
+	ScreenWidth := 320
 
-	ebiten.SetWindowSize(int(ScreenWidth), int(ScreenHeight))
+	ebiten.SetWindowSize(int(ScreenWidth*2), int(ScreenHeight*2))
 	ebiten.SetWindowTitle("Smooth Movement Demo")
 	ebiten.SetTPS(TargetTPS) // try 60 or 120; both will be smooth with dt
 

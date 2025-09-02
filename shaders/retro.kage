@@ -12,6 +12,10 @@ var Aberration float         // ~0..0.005 (0.0015 subtle)
 var Saturation float         // 0.5..1.5 (1.15 pop)
 var Contrast float           // 0.8..1.4 (1.08 contrast)
 var Gamma float              // 0.8..1.6 (1.15 brightens mids)
+var Border float         // 0 = off, ~1.0 subtle, 2.0+ stronger
+var BorderClamp float    // max darkening per pixel (e.g., 0.25)
+var BorderRadius float   // sample radius in pixels (e.g., 1.0)
+var BorderTint vec3 // e.g., vec3(0.0, 0.0, 0.0) for black
 
 // ---- helpers ----
 func clamp01(x float) float {
@@ -21,8 +25,9 @@ func clamp01(x float) float {
 }
 
 func luma(c vec3) float {
-	return dot(c, vec3(0.2126, 0.7152, 0.0722))
+    return dot(c, vec3(0.299, 0.587, 0.114)) // perceptual brightness
 }
+
 
 func saturate(c vec3, s float) vec3 {
 	gray := vec3(luma(c))
@@ -109,6 +114,23 @@ func Fragment(position vec4, texCoord vec2, srcColor vec4) vec4 {
 
 	// optional: mild posterize to taste (comment out if you don't like)
 	// base = posterize(base, 8.0)
+    // --- Configurable edge detection ---
+    tx := BorderRadius / Resolution.x
+    ty := BorderRadius / Resolution.y
+
+    centerLum := luma(base)
+    lumL := luma(imageSrc0At(texCoord + vec2(-tx, 0.0)).rgb)
+    lumR := luma(imageSrc0At(texCoord + vec2( tx, 0.0)).rgb)
+    lumU := luma(imageSrc0At(texCoord + vec2(0.0, -ty)).rgb)
+    lumD := luma(imageSrc0At(texCoord + vec2(0.0,  ty)).rgb)
+
+    edge := abs(centerLum - lumL)
+    edge = max(edge, abs(centerLum - lumR))
+    edge = max(edge, abs(centerLum - lumU))
+    edge = max(edge, abs(centerLum - lumD))
+
+    // Border = intensity multiplier, BorderClamp = cap (never crush blacks)
+    base = mix(base, base * BorderTint, clamp(edge * Border, 0.0, BorderClamp))
 
 	return vec4(base, col.a)
 }

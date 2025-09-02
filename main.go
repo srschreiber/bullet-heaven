@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"log"
@@ -45,46 +46,46 @@ func Init() {
 
 // -------------------- Math / Vec2 --------------------
 
-type Vec2 struct{ X, Y float64 }
+type Vec2 struct{ X, Y float32 }
 
-var Vec2Zero = Vec2{0, 0}
+var Vec2Zero = &Vec2{0, 0}
 
-func (v Vec2) Norm() Vec2 {
-	m := math.Hypot(v.X, v.Y)
+func (v *Vec2) Norm() *Vec2 {
+	m := math.Hypot(float64(v.X), float64(v.Y))
 	if m == 0 {
 		return Vec2Zero
 	}
-	return Vec2{v.X / m, v.Y / m}
+	return &Vec2{v.X / float32(m), v.Y / float32(m)}
 }
-func (v Vec2) Add(u Vec2) Vec2    { return Vec2{v.X + u.X, v.Y + u.Y} }
-func (v Vec2) Sub(u Vec2) Vec2    { return Vec2{v.X - u.X, v.Y - u.Y} }
-func (v Vec2) Mul(s float64) Vec2 { return Vec2{v.X * s, v.Y * s} }
-func (v Vec2) Distance(u Vec2) float64 {
-	return math.Hypot(v.X-u.X, v.Y-u.Y)
+func (v *Vec2) Add(u *Vec2) *Vec2   { return &Vec2{v.X + u.X, v.Y + u.Y} }
+func (v *Vec2) Sub(u *Vec2) *Vec2   { return &Vec2{v.X - u.X, v.Y - u.Y} }
+func (v *Vec2) Mul(s float32) *Vec2 { return &Vec2{v.X * s, v.Y * s} }
+func (v *Vec2) Distance(u *Vec2) float32 {
+	return float32(math.Hypot(float64(v.X-u.X), float64(v.Y-u.Y)))
 }
 
 // -------------------- Game types --------------------
 
 type Player struct {
-	Pos       Vec2
-	Direction Vec2
-	Speed     float64 // pixels per second
+	Pos       *Vec2
+	Direction *Vec2
+	Speed     float32 // pixels per second
 	Weapons   []Weapon
 }
 
 type Projectile struct {
-	Pos    Vec2
-	Dir    Vec2 // unit direction
-	Speed  float64
-	Radius float64
+	Pos    *Vec2
+	Dir    *Vec2 // unit direction
+	Speed  float32
+	Radius float32
 }
 
 type Weapon struct {
-	CooldownSec        float64
-	TimeSinceFire      float64
+	CooldownSec        float32
+	TimeSinceFire      float32
 	Projectiles        []Projectile
 	ProjectileInstance *Projectile
-	LastDir            Vec2 // remembers last fire direction if aiming is zero
+	LastDir            *Vec2 // remembers last fire direction if aiming is zero
 	ParticleEmitter    *SmokeEmitter
 }
 
@@ -95,8 +96,8 @@ type Game struct {
 }
 
 func (v Vec2) IsInBounds(g *Game, buffer int) bool {
-	return v.X >= float64(buffer) && v.X < float64(g.ScreenWidth-buffer) &&
-		v.Y >= float64(buffer) && v.Y < float64(g.ScreenHeight-buffer)
+	return v.X >= float32(buffer) && v.X < float32(g.ScreenWidth-buffer) &&
+		v.Y >= float32(buffer) && v.Y < float32(g.ScreenHeight-buffer)
 }
 
 // -------------------- Game loop --------------------
@@ -105,11 +106,11 @@ const TargetTPS = 120.0
 
 func (g *Game) Update() error {
 	// fixed dt tied to TargetTPS
-	dt := 1.0 / TargetTPS
+	dt := float32(1.0 / TargetTPS)
 
 	// aim at cursor (logical coords)
 	cursorX, cursorY := ebiten.CursorPosition()
-	cursor := Vec2{float64(cursorX), float64(cursorY)}
+	cursor := &Vec2{float32(cursorX), float32(cursorY)}
 	if g.Player.Pos.Distance(cursor) < 5 {
 		cursor = g.Player.Pos
 	}
@@ -121,10 +122,10 @@ func (g *Game) Update() error {
 	half := 8 // half-size of player (16px)
 	if g.Player.Pos.Add(vel).IsInBounds(g, half) {
 		g.Player.Pos = g.Player.Pos.Add(vel)
-	} else if g.Player.Pos.Add(Vec2{X: vel.X}).IsInBounds(g, half) {
-		g.Player.Pos = g.Player.Pos.Add(Vec2{X: vel.X})
-	} else if g.Player.Pos.Add(Vec2{Y: vel.Y}).IsInBounds(g, half) {
-		g.Player.Pos = g.Player.Pos.Add(Vec2{Y: vel.Y})
+	} else if g.Player.Pos.Add(&Vec2{X: vel.X}).IsInBounds(g, half) {
+		g.Player.Pos = g.Player.Pos.Add(&Vec2{X: vel.X})
+	} else if g.Player.Pos.Add(&Vec2{Y: vel.Y}).IsInBounds(g, half) {
+		g.Player.Pos = g.Player.Pos.Add(&Vec2{Y: vel.Y})
 	}
 
 	// weapons & projectiles
@@ -140,7 +141,7 @@ func (g *Game) Update() error {
 			// integrate motion
 			p.Pos = p.Pos.Add(p.Dir.Mul(p.Speed * dt))
 
-			w.ParticleEmitter.EmitDirectional(p.Pos, p.Dir, 3, p.Speed)
+			w.ParticleEmitter.EmitDirectional(p.Pos, p.Dir, 2, p.Speed)
 
 			// keep if on-screen
 			if p.Pos.IsInBounds(g, 0) {
@@ -152,7 +153,7 @@ func (g *Game) Update() error {
 
 		// fire when cooldown elapses
 		if w.TimeSinceFire >= w.CooldownSec {
-			w.TimeSinceFire = 0
+			w.TimeSinceFire = 0 + (rand.Float32()*2-1)*0.1*w.CooldownSec // add some randomness to rate of fire
 
 			newProj := *w.ProjectileInstance
 			newProj.Pos = g.Player.Pos
@@ -166,7 +167,7 @@ func (g *Game) Update() error {
 			}
 
 			// add some randomness
-			randomizedVec := Vec2{X: (rand.Float64()*2 - 1) * 0.5, Y: (rand.Float64()*2 - 1) * 0.5}
+			randomizedVec := &Vec2{X: (rand.Float32()*2 - 1) * 0.5, Y: (rand.Float32()*2 - 1) * 0.5}
 			randomizedVec = randomizedVec.Norm().Mul(.1)
 			newProj.Dir = newProj.Dir.Add(randomizedVec).Norm()
 
@@ -182,26 +183,32 @@ func (g *Game) Update() error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	actualTPS := ebiten.CurrentTPS()
 	// background
 	ebitenutil.DrawRect(screen, 0, 0, float64(g.ScreenWidth), float64(g.ScreenHeight),
 		color.RGBA{R: 128, G: 0, B: 128, A: 255})
 
 	// player (16x16 square)
 	const w = 16.0
-	ebitenutil.DrawRect(screen, g.Player.Pos.X-w/2, g.Player.Pos.Y-w/2, w, w, color.White)
-
-	// projectiles (simple circles)
-	// for i := range g.Player.Weapons {
-	// 	w := g.Player.Weapons[i]
-	// 	for _, proj := range w.Projectiles {
-	// 		ebitenutil.DrawCircle(screen, proj.Pos.X, proj.Pos.Y, proj.Radius, color.RGBA{R: 255, A: 255})
-	// 	}
-	// }
+	ebitenutil.DrawRect(screen, float64(g.Player.Pos.X-w/2), float64(g.Player.Pos.Y-w/2), float64(w), float64(w), color.White)
 
 	// draw all weapon art
 	for _, w := range g.Player.Weapons {
 		w.ParticleEmitter.Draw(screen)
 	}
+
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Actual TPS: %f", actualTPS), 10, 10)
+	numProjectiles := 0
+	numParticles := 0
+
+	for _, w := range g.Player.Weapons {
+		numProjectiles += len(w.Projectiles)
+		numParticles += len(w.ParticleEmitter.Particles)
+	}
+
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Num Projectiles: %d", numProjectiles), 10, 30)
+	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Num Particles: %.2fK", float32(numParticles)/1000), 10, 50)
+
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -222,6 +229,7 @@ func main() {
 	ebiten.SetWindowTitle("Smoke Particles Demo")
 	ebiten.SetTPS(int(TargetTPS))
 
+	defaultCooldown := float32(0.5)
 	earthProjectile := Projectile{
 		Pos:    Vec2Zero,
 		Dir:    Vec2Zero,
@@ -230,10 +238,10 @@ func main() {
 	}
 
 	earthWeapon := Weapon{
-		CooldownSec:        .1,
+		CooldownSec:        defaultCooldown,
 		Projectiles:        []Projectile{},
 		ProjectileInstance: &earthProjectile,
-		LastDir:            Vec2{0.5, 0.5},
+		LastDir:            &Vec2{0.5, 0.5},
 		ParticleEmitter:    NewSmokeEmitter(earthImage, 20000, .1, 1),
 	}
 
@@ -245,10 +253,10 @@ func main() {
 	}
 
 	fireWeapon := Weapon{
-		CooldownSec:        .1,
+		CooldownSec:        defaultCooldown,
 		Projectiles:        []Projectile{},
 		ProjectileInstance: &fireProjectile,
-		LastDir:            Vec2{0.5, 0.5},
+		LastDir:            &Vec2{0.5, 0.5},
 		ParticleEmitter:    NewSmokeEmitter(fireImage, 20000, .1, 5),
 	}
 
@@ -260,10 +268,10 @@ func main() {
 	}
 
 	smokeWeapon := Weapon{
-		CooldownSec:        .1,
+		CooldownSec:        defaultCooldown,
 		Projectiles:        []Projectile{},
 		ProjectileInstance: &smokeProjectile,
-		LastDir:            Vec2{0.5, 0.5},
+		LastDir:            &Vec2{0.5, 0.5},
 		ParticleEmitter:    NewSmokeEmitter(smokeImage, 20000, .1, 1),
 	}
 
@@ -271,7 +279,7 @@ func main() {
 		ScreenWidth:  logicalW,
 		ScreenHeight: logicalH,
 		Player: Player{
-			Pos:       Vec2{X: 100, Y: 100},
+			Pos:       &Vec2{X: 100, Y: 100},
 			Direction: Vec2Zero,
 			Speed:     80, // px/sec
 			Weapons:   []Weapon{earthWeapon, fireWeapon, smokeWeapon},

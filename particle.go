@@ -12,13 +12,13 @@ import (
 // =======================
 
 type SmokeParticle struct {
-	Pos   Vec2
-	Vel   Vec2
-	Life  float64 // remaining lifetime
-	Max   float64 // initial lifetime
-	Scale float64
-	Rot   float64
-	Spin  float64
+	Pos   *Vec2
+	Vel   *Vec2
+	Life  float32 // remaining lifetime
+	Max   float32 // initial lifetime
+	Scale float32
+	Rot   float32
+	Spin  float32
 }
 
 type SmokeEmitter struct {
@@ -27,21 +27,21 @@ type SmokeEmitter struct {
 	MaxParticles int
 
 	// Tunables for "shooting star" feel
-	ScaleBase  float64 // base starting scale
-	ScaleVar   float64 // random extra start scale
-	Growth     float64 // scale growth per second
-	Damping    float64 // velocity damping per tick (e.g., 0.99)
-	SpinRange  float64 // max abs spin (rad/s)
+	ScaleBase  float32 // base starting scale
+	ScaleVar   float32 // random extra start scale
+	Growth     float32 // scale growth per second
+	Damping    float32 // velocity damping per tick (e.g., 0.99)
+	SpinRange  float32 // max abs spin (rad/s)
 	AlphaCurve int     // 1=linear, 2=quad, 3=cubic
 
 	// Directional trail settings
-	Spread   float64 // radians half-angle (e.g., 0.15)
-	Jitter   float64 // spawn jitter in px (e.g., 0.5)
-	Lifetime float64
+	Spread   float32 // radians half-angle (e.g., 0.15)
+	Jitter   float32 // spawn jitter in px (e.g., 0.5)
+	Lifetime float32
 }
 
 // NewSmokeEmitter creates a trail-style emitter with sensible defaults.
-func NewSmokeEmitter(img *ebiten.Image, max int, scale float64, lifetime float64) *SmokeEmitter {
+func NewSmokeEmitter(img *ebiten.Image, max int, scale float32, lifetime float32) *SmokeEmitter {
 	return &SmokeEmitter{
 		Img:          img,
 		Particles:    make([]SmokeParticle, 0, max),
@@ -63,14 +63,14 @@ func NewSmokeEmitter(img *ebiten.Image, max int, scale float64, lifetime float64
 
 // Emit keeps for compatibility (still works, but directional is preferred).
 // Emits with zero forward bias (randomized in a narrow cone around +X).
-func (e *SmokeEmitter) Emit(pos Vec2, n int) {
+func (e *SmokeEmitter) Emit(pos *Vec2, n int) {
 	// default forward dir = +X
-	e.EmitDirectional(pos, Vec2{1, 0}, n, 1.0)
+	e.EmitDirectional(pos, &Vec2{1, 0}, n, 1.0)
 }
 
 // EmitDirectional spawns N particles forward along `dir` with a narrow spread.
 // `dir` should be normalized; `speedScale` lets you tie speed to projectile speed.
-func (e *SmokeEmitter) EmitDirectional(pos Vec2, dir Vec2, n int, speedScale float64) {
+func (e *SmokeEmitter) EmitDirectional(pos *Vec2, dir *Vec2, n int, speedScale float32) {
 	if e.Img == nil || n <= 0 {
 		return
 	}
@@ -80,7 +80,7 @@ func (e *SmokeEmitter) EmitDirectional(pos Vec2, dir Vec2, n int, speedScale flo
 
 	// ensure direction
 	d := dir.Norm()
-	base := math.Atan2(d.Y, d.X)
+	base := float32(math.Atan2(float64(d.Y), float64(d.X)))
 
 	// clamp how many we can add without realloc
 	space := e.MaxParticles - len(e.Particles)
@@ -90,27 +90,27 @@ func (e *SmokeEmitter) EmitDirectional(pos Vec2, dir Vec2, n int, speedScale flo
 
 	for i := 0; i < n; i++ {
 		// angle within a narrow cone
-		ang := base + (rand.Float64()*2-1)*e.Spread
-		spd := speedScale + rand.Float64()*speedScale*0.5
+		ang := float64(base + (rand.Float32()*2-1)*e.Spread)
+		spd := float64(speedScale + rand.Float32()*speedScale*0.5)
 
-		vx := math.Cos(ang) * spd
-		vy := math.Sin(ang) * spd
+		vx := float32(math.Cos(ang) * spd)
+		vy := float32(math.Sin(ang) * spd)
 
 		// slight jitter to avoid perfect overlap
-		jx := (rand.Float64()*2 - 1) * e.Jitter
-		jy := (rand.Float64()*2 - 1) * e.Jitter
+		jx := (rand.Float32()*2 - 1) * e.Jitter
+		jy := (rand.Float32()*2 - 1) * e.Jitter
 
 		// lifetime: tight/starry trails look good with shorter life
-		life := e.Lifetime + e.Lifetime*rand.Float64()*0.5
+		life := e.Lifetime + e.Lifetime*rand.Float32()*0.5
 
-		startScale := e.ScaleBase + rand.Float64()*e.ScaleVar
-		spin := (rand.Float64()*2 - 1) * e.SpinRange
+		startScale := e.ScaleBase + rand.Float32()*e.ScaleVar
+		spin := (rand.Float32()*2 - 1) * e.SpinRange
 
 		e.Particles = append(e.Particles, SmokeParticle{
-			Pos:   Vec2{pos.X + jx, pos.Y + jy},
-			Vel:   Vec2{vx, vy},
-			Life:  float64(life),
-			Max:   float64(life),
+			Pos:   &Vec2{pos.X + jx, pos.Y + jy},
+			Vel:   &Vec2{vx, vy},
+			Life:  float32(life),
+			Max:   float32(life),
 			Scale: startScale,
 			Rot:   0,
 			Spin:  spin,
@@ -119,7 +119,7 @@ func (e *SmokeEmitter) EmitDirectional(pos Vec2, dir Vec2, n int, speedScale flo
 }
 
 // Update advances all particles and culls dead ones.
-func (e *SmokeEmitter) Update(dt float64) {
+func (e *SmokeEmitter) Update(dt float32) {
 	if len(e.Particles) == 0 {
 		return
 	}
@@ -129,7 +129,7 @@ func (e *SmokeEmitter) Update(dt float64) {
 
 	for i := 0; i < len(e.Particles); i++ {
 		p := e.Particles[i]
-		p.Life -= float64(dt)
+		p.Life -= float32(dt)
 		if p.Life <= 0 {
 			continue
 		}
@@ -143,7 +143,7 @@ func (e *SmokeEmitter) Update(dt float64) {
 
 		// gentle growth + spin
 		p.Scale += grow * dt
-		p.Scale = math.Max(0, p.Scale)
+		p.Scale = float32(math.Max(0, float64(p.Scale)))
 		p.Rot += p.Spin * dt
 
 		next = append(next, p)
@@ -162,13 +162,13 @@ func (e *SmokeEmitter) Draw(screen *ebiten.Image) {
 
 		op := &ebiten.DrawImageOptions{}
 		op.GeoM.Translate(-float64(w)/2, -float64(h)/2)
-		op.GeoM.Rotate(p.Rot)
-		op.GeoM.Scale(p.Scale, p.Scale)
-		op.GeoM.Translate(p.Pos.X, p.Pos.Y)
+		op.GeoM.Rotate(float64(p.Rot))
+		op.GeoM.Scale(float64(p.Scale), float64(p.Scale))
+		op.GeoM.Translate(float64(p.Pos.X), float64(p.Pos.Y))
 
 		// fade alpha by life with chosen curve
 		elapsed := 1.0 - (p.Life / p.Max) // 0..1
-		a := 1.0
+		a := float32(1.0)
 		switch e.AlphaCurve {
 		case 1: // linear
 			a = 1.0 - elapsed

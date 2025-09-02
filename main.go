@@ -8,12 +8,20 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"time"
 
 	_ "image/png" // PNG decoder
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+
+	// shaders/retro_shader
+
+	_ "embed"
 )
+
+//go:embed shaders/retro.kage
+var retroShaderSrc []byte
 
 var earthImage *ebiten.Image
 var smokeImage *ebiten.Image
@@ -93,6 +101,10 @@ type Game struct {
 	Player       Player
 	ScreenWidth  int
 	ScreenHeight int
+	retroShader  *ebiten.Shader
+	offscreen    *ebiten.Image
+	startedAt    time.Time
+	off          *ebiten.Image
 }
 
 func (v Vec2) IsInBounds(g *Game, buffer int) bool {
@@ -182,33 +194,63 @@ func (g *Game) Update() error {
 	return nil
 }
 
-func (g *Game) Draw(screen *ebiten.Image) {
-	actualTPS := ebiten.CurrentTPS()
+func (g *Game) drawScene(dst *ebiten.Image) {
 	// background
-	ebitenutil.DrawRect(screen, 0, 0, float64(g.ScreenWidth), float64(g.ScreenHeight),
+	ebitenutil.DrawRect(dst, 0, 0, float64(g.ScreenWidth), float64(g.ScreenHeight),
 		color.RGBA{R: 128, G: 0, B: 128, A: 255})
 
 	// player (16x16 square)
 	const w = 16.0
-	ebitenutil.DrawRect(screen, float64(g.Player.Pos.X-w/2), float64(g.Player.Pos.Y-w/2), float64(w), float64(w), color.White)
+	ebitenutil.DrawRect(dst, float64(g.Player.Pos.X-w/2), float64(g.Player.Pos.Y-w/2), float64(w), float64(w), color.White)
 
-	// draw all weapon art
+	// particles
 	for _, w := range g.Player.Weapons {
-		w.ParticleEmitter.Draw(screen)
+		w.ParticleEmitter.Draw(dst)
 	}
+}
+
+func (g *Game) Draw(screen *ebiten.Image) {
+	if g.off == nil || g.off.Bounds().Dx() != g.ScreenWidth || g.off.Bounds().Dy() != g.ScreenHeight {
+		g.off = ebiten.NewImage(g.ScreenWidth, g.ScreenHeight)
+	}
+	g.off.Clear()
+	g.drawScene(g.off) // your current drawing code extracted into a helper
+
+	// pass uniforms
+	t := float32(time.Since(g.startedAt).Seconds())
+	uniforms := map[string]interface{}{
+		"Time":       t,
+		"Resolution": []float32{float32(g.ScreenWidth), float32(g.ScreenHeight)},
+
+		// nice VS-ish defaults — tweak live
+		"PixelSize":  float32(0.0),    // 1..4
+		"Vignette":   float32(0.4),    // 0..1
+		"Grain":      float32(0.1),    // 0..0.4
+		"Bloom":      float32(0.55),   // 0..1
+		"Aberration": float32(0.0015), // 0..0.005
+		"Saturation": float32(.8),     // 0.8..1.3
+		"Contrast":   float32(1.2),    // 0.9..1.2
+		"Gamma":      float32(.9),     // 0.9..1.4
+	}
+
+	op := &ebiten.DrawRectShaderOptions{
+		Images:   [4]*ebiten.Image{g.off, g.off, g.off, g.off}, // imageSrc0
+		Uniforms: uniforms,
+	}
+	screen.DrawRectShader(g.ScreenWidth, g.ScreenHeight, g.retroShader, op)
+
+	// debug
+	actualTPS := ebiten.CurrentTPS()
 
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Actual TPS: %f", actualTPS), 10, 10)
 	numProjectiles := 0
 	numParticles := 0
-
 	for _, w := range g.Player.Weapons {
 		numProjectiles += len(w.Projectiles)
 		numParticles += len(w.ParticleEmitter.Particles)
 	}
-
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Num Projectiles: %d", numProjectiles), 10, 30)
 	ebitenutil.DebugPrintAt(screen, fmt.Sprintf("Num Particles: %.2fK", float32(numParticles)/1000), 10, 50)
-
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -284,7 +326,14 @@ func main() {
 			Speed:     80, // px/sec
 			Weapons:   []Weapon{earthWeapon, fireWeapon, smokeWeapon},
 		},
+		startedAt: time.Now(),
 	}
+
+	sh, err := ebiten.NewShader([]byte(retroShaderSrc))
+	if err != nil {
+		log.Fatal(err)
+	}
+	game.retroShader = sh
 
 	if err := ebiten.RunGame(game); err != nil {
 		log.Fatal(err)

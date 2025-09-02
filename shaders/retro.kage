@@ -1,0 +1,114 @@
+//kage:unit
+package main
+
+// ---- Uniforms you set from Go ----
+var Time float               // seconds
+var Resolution vec2          // (w, h)
+var PixelSize float          // size of "retro pixels" in logical px (e.g., 2)
+var Vignette float           // 0..1 (0 = off, 0.35 nice)
+var Grain float              // 0..0.4 (0.06 nice)
+var Bloom float              // 0..1 (0.4–0.7 nice)
+var Aberration float         // ~0..0.005 (0.0015 subtle)
+var Saturation float         // 0.5..1.5 (1.15 pop)
+var Contrast float           // 0.8..1.4 (1.08 contrast)
+var Gamma float              // 0.8..1.6 (1.15 brightens mids)
+
+// ---- helpers ----
+func clamp01(x float) float {
+	if x < 0 { return 0 }
+	if x > 1 { return 1 }
+	return x
+}
+
+func luma(c vec3) float {
+	return dot(c, vec3(0.2126, 0.7152, 0.0722))
+}
+
+func saturate(c vec3, s float) vec3 {
+	gray := vec3(luma(c))
+	return mix(gray, c, s)
+}
+
+func posterize(c vec3, steps float) vec3 {
+	return floor(c * steps) / steps
+}
+
+func hash2(p vec2) float {
+	// cheap, stable hash for grain
+	return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453)
+}
+
+// sample with pixelation grid
+func samplePixelated(uv vec2) vec4 {
+	px := PixelSize / Resolution.x
+	py := PixelSize / Resolution.y
+	uvp := vec2(floor(uv.x/px)*px, floor(uv.y/py)*py)
+	return imageSrc0At(uvp)
+}
+
+func Fragment(position vec4, texCoord vec2, srcColor vec4) vec4 {
+	// Base color with pixelation
+	col := samplePixelated(texCoord)
+	base := col.rgb
+
+	// ---- Cheap bloom (5 taps): diagonals + center ----
+	if Bloom > 0.0 {
+		// texel size
+		tx := 1.0 / Resolution.x
+		ty := 1.0 / Resolution.y
+		// slightly larger radius with pixel size
+		r := (PixelSize * 0.75)
+		ox := tx * r
+		oy := ty * r
+
+		c0 := imageSrc0At(texCoord + vec2( 0.0,  0.0)).rgb
+		c1 := imageSrc0At(texCoord + vec2( ox,  oy)).rgb
+		c2 := imageSrc0At(texCoord + vec2(-ox,  oy)).rgb
+		c3 := imageSrc0At(texCoord + vec2( ox, -oy)).rgb
+		c4 := imageSrc0At(texCoord + vec2(-ox, -oy)).rgb
+
+		b := (c0*0.6 + (c1+c2+c3+c4)*0.1) // soft halo
+		base = mix(base, b, clamp01(Bloom))
+	}
+
+	// ---- Subtle chromatic aberration ----
+	if Aberration > 0.0 {
+		center := texCoord - vec2(0.5, 0.5)
+		dir := center * 2.0
+		shift := Aberration
+
+		// sample R/G/B at slightly different coords along radial dir
+		rC := imageSrc0At(texCoord + dir * ( shift)).r
+		gC := imageSrc0At(texCoord + dir * ( 0.0 )).g
+		bC := imageSrc0At(texCoord + dir * (-shift)).b
+		base = vec3(rC, gC, bC)
+	}
+
+	// ---- Vignette ----
+	if Vignette > 0.0 {
+		c := texCoord - vec2(0.5, 0.5)
+		// square falloff for a gamey look
+		v := 1.0 - dot(c, c) * 2.0
+		v = clamp01(v)
+		base *= mix(1.0, v, Vignette)
+	}
+
+	// ---- Color tweaks ----
+	base = saturate(base, Saturation)
+	base = mix(vec3(0.5), base, Contrast) // simple contrast
+	base = pow(base, vec3(1.0 / Gamma))   // gamma adjust
+
+	// ---- Film grain (screen-space, time varying) ----
+	if Grain > 0.0 {
+		// grain in pixel space so it 'sticks' to pixels
+		p := vec2(floor(texCoord.x*Resolution.x), floor(texCoord.y*Resolution.y))
+		n := hash2(p + vec2(Time*123.4, Time*345.6))
+		g := (n - 0.5) * 2.0 // -1..1
+		base += g * (Grain * 0.08) // tiny effect
+	}
+
+	// optional: mild posterize to taste (comment out if you don't like)
+	// base = posterize(base, 8.0)
+
+	return vec4(base, col.a)
+}

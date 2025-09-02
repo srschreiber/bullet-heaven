@@ -197,7 +197,7 @@ func (g *Game) Update() error {
 func (g *Game) drawScene(dst *ebiten.Image) {
 	// background
 	ebitenutil.DrawRect(dst, 0, 0, float64(g.ScreenWidth), float64(g.ScreenHeight),
-		color.RGBA{R: 128, G: 0, B: 128, A: 255})
+		color.RGBA{R: 0, G: 100, B: 200, A: 255})
 
 	// player (16x16 square)
 	const w = 16.0
@@ -218,6 +218,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 	// pass uniforms
 	t := float32(time.Since(g.startedAt).Seconds())
+
 	uniforms := map[string]interface{}{
 		"Time":       t,
 		"Resolution": []float32{float32(g.ScreenWidth), float32(g.ScreenHeight)},
@@ -225,15 +226,15 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		// nice VS-ish defaults — tweak live
 		"PixelSize":    float32(2),               // 1..4
 		"Vignette":     float32(0.4),             // 0..1
-		"Grain":        float32(0.2),             // 0..0.4
+		"Grain":        float32(0.07),            // 0..0.4
 		"Bloom":        float32(0.55),            // 0..1
-		"Aberration":   float32(0.0015),          // 0..0.005
+		"Aberration":   float32(0.002),           // 0..0.005
 		"Saturation":   float32(.8),              // 0.8..1.3
 		"Contrast":     float32(1.2),             // 0.9..1.2
 		"Gamma":        float32(1.2),             // 0.9..1.4
 		"Border":       float32(1.5),             // intensity (try 0.8–1.5)
 		"BorderClamp":  float32(.3),              // max darken (0.15–0.35)
-		"BorderRadius": float32(1.3),             // neighbor distance in px (1–2)
+		"BorderRadius": float32(.8),              // neighbor distance in px (1–2)
 		"BorderTint":   []float32{0.0, 0.0, 0.0}, // black
 	}
 
@@ -275,7 +276,7 @@ func main() {
 	ebiten.SetWindowTitle("Smoke Particles Demo")
 	ebiten.SetTPS(int(TargetTPS))
 
-	defaultCooldown := float32(0.5)
+	defaultCooldown := float32(2)
 	earthProjectile := Projectile{
 		Pos:    Vec2Zero,
 		Dir:    Vec2Zero,
@@ -289,6 +290,7 @@ func main() {
 		ProjectileInstance: &earthProjectile,
 		LastDir:            &Vec2{0.5, 0.5},
 		ParticleEmitter:    NewSmokeEmitter(earthImage, 20000, .1, 1),
+		TimeSinceFire:      rand.Float32() * defaultCooldown, // stagger fire times
 	}
 
 	fireProjectile := Projectile{
@@ -304,6 +306,7 @@ func main() {
 		ProjectileInstance: &fireProjectile,
 		LastDir:            &Vec2{0.5, 0.5},
 		ParticleEmitter:    NewSmokeEmitter(fireImage, 20000, .1, 5),
+		TimeSinceFire:      rand.Float32() * defaultCooldown, // stagger fire times
 	}
 
 	smokeProjectile := Projectile{
@@ -319,6 +322,7 @@ func main() {
 		ProjectileInstance: &smokeProjectile,
 		LastDir:            &Vec2{0.5, 0.5},
 		ParticleEmitter:    NewSmokeEmitter(smokeImage, 20000, .1, 1),
+		TimeSinceFire:      rand.Float32() * defaultCooldown, // stagger fire times
 	}
 
 	game := &Game{

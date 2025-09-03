@@ -2,148 +2,117 @@ package util
 
 import (
 	"image"
+	"log"
+	"math"
+	"strconv"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
 type AnimationState int
 
-const (
-	// Left-walk cycle frames
-	WalkLeftLegForward       AnimationState = iota // phase 0
-	WalkLeftBothFeetTogether                       // phase 1
-	WalkLeftRightLegForward                        // phase 2
-
-	// Right-walk cycle frames
-	WalkRightLegForward
-	WalkRightFeetTogether
-	WalkRightLeftLegForward
-)
-
-// AnimationManager drives a reliable L-Both-R-Both cadence.
-// We keep a small 4-step wheel [0,1,2,1] and map it to L/R states.
 type AnimationManager struct {
-	spriteSheet *ebiten.Image
-	frames      map[AnimationState]image.Rectangle
-
-	// phase wheel index 0..3 over [0,1,2,1]
-	phaseIdx int
-	// cached phase value derived from phaseIdx (0,1,2)
-	phase int
-
-	// facingLeft determines which branch to use for mapping
-	facingLeft bool
-
-	frameDuration time.Duration
-	timeInPhase   time.Duration
+	walkingLeftDFA  *DFA
+	walkingRightDFA *DFA
+	walkingUpDFA    *DFA
+	walkingDownDFA  *DFA
+	// last dfa for when no input is received, or detecting when just arrived at new dfa (reset to start)
+	curDFA      *DFA
+	timeInState time.Duration
 }
 
-// NewAnimationManager initializes paused on "feet together" facing right.
-func NewAnimationManager(spriteSheet *ebiten.Image, frames map[AnimationState]image.Rectangle, frameDuration time.Duration) *AnimationManager {
-	am := &AnimationManager{
-		spriteSheet:   spriteSheet,
-		frames:        frames,
-		frameDuration: frameDuration,
+/*
+Load the sprite sheet.
+Assume it is 4x9 in order, and each frame is 8x8 pixels.
+*/
+func loadDFA(spritSheetPath string, row int, numCols int, width int, input string) *DFA {
+	col := 0
+	var start *state
+	var curState *state
+	for col < numCols {
+		rect := image.Rect(col*width, row*width, (col+1)*width, (row+1)*width)
+		spriteSheet, _, err := ebitenutil.NewImageFromFile(spritSheetPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		frame := spriteSheet.SubImage(rect).(*ebiten.Image)
+		nextState := NewState("frame"+strconv.Itoa(col), frame)
+		if curState != nil {
+			curState.AddTransition(input, nextState)
+		}
+		curState = nextState
+		if start == nil {
+			start = curState
+		}
+		col++
 	}
-	am.phaseIdx = 1 // [0,1,2,1] -> index 1 is "both"
-	am.phase = 1
-	am.facingLeft = false
-	return am
+	return &DFA{
+		startState:   start,
+		currentState: start,
+	}
 }
 
-// CurrentFrame returns the subimage for the current state.
-func (am *AnimationManager) CurrentFrame() *ebiten.Image {
-	rect := am.frames[am.currentState()]
-	return am.spriteSheet.SubImage(rect).(*ebiten.Image)
+func NewAnimationManager(spriteSheet string) *AnimationManager {
+	upDFA := loadDFA(spriteSheet, 0, 9, 64, "step")
+	leftDFA := loadDFA(spriteSheet, 1, 9, 64, "step")
+	downDFA := loadDFA(spriteSheet, 2, 9, 64, "step")
+	rightDFA := loadDFA(spriteSheet, 3, 9, 64, "step")
+
+	return &AnimationManager{
+		walkingUpDFA:    upDFA,
+		walkingLeftDFA:  leftDFA,
+		walkingDownDFA:  downDFA,
+		walkingRightDFA: rightDFA,
+		curDFA:          rightDFA,
+	}
 }
 
-// UpdateByDirection advances animation based on direction and dt.
-// Rules (as requested):
-// - If mostly horizontal: animate left/right normally.
-// - If mostly vertical but ANY horizontal exists: animate using that left/right sign.
-// - If perfectly vertical (dirX == 0): animate with current facing (don't flip).
-// - If stopped: pause on feet-together for last facing.
+func (am *AnimationManager) GetCurrentFrame() *ebiten.Image {
+	if am.curDFA != nil {
+		return am.curDFA.currentState.stateData.(*ebiten.Image)
+	}
+	return nil
+}
+
 func (am *AnimationManager) UpdateByDirection(dirX, dirY float64, dt time.Duration) {
-	am.timeInPhase += dt
+	var nextDFA *DFA
+	am.timeInState += dt
 
-	// Determine target facing from direction
-	ax, ay := abs(dirX), abs(dirY)
-	moving := (ax > 0) || (ay > 0)
-
-	if !moving {
-		// Pause on Both in current facing
-		am.snapToBoth()
+	if am.timeInState < 150*time.Millisecond {
 		return
 	}
 
-	switch {
-	case ax >= ay:
-		// Horizontal dominates → face by sign
-		am.facingLeft = dirX < 0
-	case dirX != 0:
-		// Vertical dominates but we have slight horizontal → use its sign
-		am.facingLeft = dirX < 0
-		// else perfectly vertical: keep current facing (no change)
-	}
+	am.timeInState = 0
 
-	// Advance cadence on timer
-	if am.timeInPhase >= am.frameDuration {
-		am.timeInPhase = 0
-		am.phaseIdx = (am.phaseIdx + 1) % 4 // 0,1,2,1,0,1...
-		am.phase = wheelPhase(am.phaseIdx)  // map idx -> {0,1,2}
-	}
-}
-
-// --- internals ---
-
-// Map wheel index to phase value {0,1,2,1}
-func wheelPhase(idx int) int {
-	switch idx & 3 {
-	case 0:
-		return 0
-	case 1:
-		return 1
-	case 2:
-		return 2
-	default:
-		return 1
-	}
-}
-
-// currentState maps (phase, facingLeft) → concrete sprite frame.
-func (am *AnimationManager) currentState() AnimationState {
-	if am.facingLeft {
-		switch am.phase {
-		case 0:
-			return WalkLeftLegForward
-		case 1:
-			return WalkLeftBothFeetTogether
-		default: // 2
-			return WalkLeftRightLegForward
+	if dirX == 0 && dirY == 0 {
+		// If no direction is given, reset to idle animation
+		nextDFA = am.walkingDownDFA
+		am.curDFA = nextDFA
+		return
+	} else {
+		// find direction it is most in
+		if math.Abs(dirX) > math.Abs(dirY) {
+			if dirX > 0 {
+				nextDFA = am.walkingRightDFA
+			} else {
+				nextDFA = am.walkingLeftDFA
+			}
+		} else {
+			if dirY > 0 {
+				nextDFA = am.walkingDownDFA
+			} else {
+				nextDFA = am.walkingUpDFA
+			}
 		}
 	}
-	// facing right
-	switch am.phase {
-	case 0:
-		return WalkRightLegForward
-	case 1:
-		return WalkRightFeetTogether
-	default: // 2
-		return WalkRightLeftLegForward
-	}
-}
 
-// snapToBoth pauses on the "feet together" frame for the current facing.
-func (am *AnimationManager) snapToBoth() {
-	am.phaseIdx = 1 // index 1 in [0,1,2,1] is the "both" phase
-	am.phase = 1
-	am.timeInPhase = 0
-}
-
-func abs(x float64) float64 {
-	if x < 0 {
-		return -x
+	if nextDFA == am.curDFA {
+		am.curDFA.currentState = am.curDFA.NextState("step")
+	} else {
+		am.curDFA = nextDFA
+		// reset to beginning
+		am.curDFA.currentState = am.curDFA.startState
 	}
-	return x
 }

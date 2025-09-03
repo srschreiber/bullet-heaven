@@ -1,0 +1,358 @@
+{
+  "bodyTypeName": "male",
+  "url": "https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator/#?body=Body_color_light&head=Human_male_plump_light&sex=male&shadow=Shadow_shadow&wheelchair=none_Wheelchair&gloves=Gloves_lavender&cape=Solid_lavender&cape_trim=Cape_Trim_lavender&legs=Pants_lavender&shoes=Sara_Shoes_lavender&weapon=Gnarled_staff_medium&shoulders=none_Legion&arms=none_Armour&sash=Obi_lavender&beard=Winter_Beard_white&hair=Curtains_long_white&facial_left=Left_Monocle_iron&bauldron=Bauldron_charcoal&hat=Celestial_Wizard_Hat_lavender&bracers=none_Bracers&sash_tie=Obi_Knot_Right_lavender&ring=none_Stud_Ring&shield=none_Heater_Shield_Base&jacket=Tabard_lavender&armour=Leather_lavender&clothes=Longsleeve_lavender",
+  "spritesheets": "https://liberatedpixelcup.github.io/Universal-LPC-Spritesheet-Character-Generator/spritesheets/",
+  "version": 1,
+  "datetime": "9/2/2025, 10:07:58 PM",
+  "credits": [
+    {
+      "fileName": "shadow/adult/shadow.png",
+      "licenses": "CC0",
+      "authors": "drjamgo@hotmail.com",
+      "urls": "https://opengameart.org/content/shadow-for-lpc-sprite",
+      "notes": ""
+    },
+    {
+      "fileName": "body/bodies/male/light.png",
+      "licenses": "OGA-BY 3.0,CC-BY-SA 3.0,GPL 3.0",
+      "authors": "bluecarrot16,JaidynReiman,Benjamin K. Smith (BenCreating),Evert,Eliza Wyatt (ElizaWy),TheraHedwig,MuffinElZangano,Durrani,Johannes Sjölund (wulax),Stephen Challener (Redshrike)",
+      "urls": "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles,https://opengameart.org/content/lpc-medieval-fantasy-character-sprites,https://opengameart.org/content/lpc-male-jumping-animation-by-durrani,https://opengameart.org/content/lpc-runcycle-and-diagonal-walkcycle,https://opengameart.org/content/lpc-revised-character-basics,https://opengameart.org/content/lpc-be-seated,https://opengameart.org/content/lpc-runcycle-for-male-muscular-and-pregnant-character-bases-with-modular-heads,https://opengameart.org/content/lpc-jump-expanded,https://opengameart.org/content/lpc-character-bases",
+      "notes": "see details at https://opengameart.org/content/lpc-character-bases; 'Thick' Male Revised Run/Climb by JaidynReiman (based on ElizaWy's LPC Revised)"
+    },
+    {
+      "fileName": "head/heads/human/male_plump/light.png",
+      "licenses": "CC-BY-SA 3.0,GPL 3.0",
+      "authors": "Stephen Challener (Redshrike),??",
+      "urls": "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles,https://opengameart.org/content/lpc-folk",
+      "notes": "original head by Redshrike, plump version by ??"
+    },
+    {
+      "fileName": "beards/beard/winter/male/white.png",
+      "licenses": "CC0",
+      "authors": "bluecarrot16",
+      "urls": "https://opengameart.org/content/lpc-santa",
+      "notes": ""
+    },
+    {
+      "fileName": "hair/curtains_long/adult/white.png",
+      "licenses": "GPL 2.0,GPL 3.0,CC-BY 3.0",
+      "authors": "Mandi Paugh,bluecarrot16",
+      "urls": "https://opengameart.org/content/trevor-overland,https://opengameart.org/content/lpc-hair",
+      "notes": "(trevor)"
+    },
+    {
+      "fileName": "hat/magic/celestial/adult/lavender.png",
+      "licenses": "CC-BY 3.0",
+      "authors": "Napsio,Michael Whitlock (bigbeargames),Tracy",
+      "urls": "https://opengameart.org/content/lpc-celestial-wizard-hats,https://opengameart.org/content/lpc-expanded-hats-facial-helmets",
+      "notes": "Original by Tracy, Adapted to ULPC by Big Bear Games, reduced colors by Napsio"
+    },
+    {
+      "fileName": "facial/monocle/left/adult/iron.png",
+      "licenses": "CC-BY-SA 3.0,GPL 3.0",
+      "authors": "bluecarrot16,Thane Brimhall (pennomi),laetissima",
+      "urls": "https://opengameart.org/content/clothing-facial-features-and-ui-elements,https://opengameart.org/content/lpc-gentleman,https://opengameart.org/content/lpc-expanded-hats-facial-helmets",
+      "notes": ""
+    },
+    {
+      "fileName": "bauldron/male/charcoal.png",
+      "licenses": "GPL 2.0,GPL 3.0,OGA-BY 3.0,CC-BY-SA 3.0",
+      "authors": "Nila122",
+      "urls": "https://opengameart.org/content/more-lpc-clothes-and-hair",
+      "notes": ""
+    },
+    {
+      "fileName": "arms/gloves/male/lavender.png",
+      "licenses": "OGA-BY 3.0,CC-BY-SA 3.0,GPL 3.0",
+      "authors": "Michael Whitlock (bigbeargames),Matthew Krohn (makrohn),Johannes Sjölund (wulax),bluecarrot16,JaidynReiman",
+      "urls": "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites,http://opengameart.org/content/lpc-clothing-updates",
+      "notes": "metal gloves by wulax, recolors by bigbeargames, adapted to v3 bases by bluecarrot16, added to expanded animations by JaidynReiman"
+    },
+    {
+      "fileName": "torso/clothes/longsleeve/longsleeve/male/lavender.png",
+      "licenses": "OGA-BY 3.0,CC-BY-SA 3.0,GPL 3.0",
+      "authors": "JaidynReiman,Johannes Sjölund (wulax)",
+      "urls": "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites,http://opengameart.org/content/lpc-clothing-updates,https://opengameart.org/content/lpc-revised-character-basics,https://github.com/ElizaWy/LPC/tree/main/Characters/Clothing,https://opengameart.org/content/lpc-expanded-sit-run-jump-more,https://opengameart.org/content/lpc-expanded-simple-shirts",
+      "notes": "original by wulax; tweaks and further recolors by bluecarrot16; cleanup and climb/jump/run/sit/emote/revised combat adapted from LPC Revised by JaidynReiman"
+    },
+    {
+      "fileName": "torso/jacket/tabard/male/lavender.png",
+      "licenses": "OGA-BY 3.0,CC-BY-SA 3.0,GPL 3.0",
+      "authors": "bluecarrot16,Johannes Sjölund (wulax)",
+      "urls": "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites,http://opengameart.org/content/lpc-clothing-updates",
+      "notes": "original by wulax, edited to v3 base by bluecarrot16"
+    },
+    {
+      "fileName": "torso/armour/leather/male/lavender.png",
+      "licenses": "OGA-BY 3.0,CC-BY-SA 3.0,GPL 3.0",
+      "authors": "Johannes Sjölund (wulax)",
+      "urls": "https://opengameart.org/content/lpc-medieval-fantasy-character-sprites,http://opengameart.org/content/lpc-clothing-updates",
+      "notes": "adapted to v3 bases by bluecarrot16"
+    },
+    {
+      "fileName": "cape/solid/female/lavender.png",
+      "licenses": "OGA-BY 3.0,CC-BY-SA 3.0,GPL 3.0",
+      "authors": "bluecarrot16,JaidynReiman",
+      "urls": "https://opengameart.org/content/lpc-curly-hair-elven-ears-white-cape-with-blue-trim-and-more,https://opengameart.org/content/lpc-roman-armor,http://opengameart.org/content/lpc-clothing-updates",
+      "notes": ""
+    },
+    {
+      "fileName": "cape/solid_behind/lavender.png",
+      "licenses": "OGA-BY 3.0,CC-BY-SA 3.0,GPL 3.0",
+      "authors": "Nila122,JaidynReiman",
+      "urls": "https://opengameart.org/content/lpc-curly-hair-elven-ears-white-cape-with-blue-trim-and-more,https://opengameart.org/content/lpc-roman-armor",
+      "notes": ""
+    },
+    {
+      "fileName": "cape/trim/female/lavender.png",
+      "licenses": "OGA-BY 3.0,CC-BY-SA 3.0,GPL 3.0",
+      "authors": "bluecarrot16,JaidynReiman",
+      "urls": "https://opengameart.org/content/lpc-curly-hair-elven-ears-white-cape-with-blue-trim-and-more,http://opengameart.org/content/lpc-clothing-updates",
+      "notes": "isolated stripe from cape_trimmed, adapted to v3 bases by bluecarrot16"
+    },
+    {
+      "fileName": "torso/waist/obi/male/lavender.png",
+      "licenses": "OGA-BY 3.0+,CC-BY 3.0+,GPL 3.0",
+      "authors": "JaidynReiman",
+      "urls": "https://opengameart.org/content/lpc-kimono-relm",
+      "notes": ""
+    },
+    {
+      "fileName": "torso/waist/obi/knot/right/male/lavender.png",
+      "licenses": "OGA-BY 3.0+,CC-BY 3.0+,GPL 3.0",
+      "authors": "JaidynReiman",
+      "urls": "https://opengameart.org/content/lpc-kimono-relm",
+      "notes": ""
+    },
+    {
+      "fileName": "legs/pants/male/lavender.png",
+      "licenses": "OGA-BY 3.0,GPL 3.0,CC-BY-SA 3.0",
+      "authors": "bluecarrot16,JaidynReiman,ElizaWy,Matthew Krohn (makrohn),Johannes Sjölund (wulax),Stephen Challener (Redshrike)",
+      "urls": "https://opengameart.org/content/liberated-pixel-cup-lpc-base-assets-sprites-map-tiles,https://opengameart.org/content/lpc-medieval-fantasy-character-sprites,https://opengameart.org/content/lpc-expanded-pants",
+      "notes": "original male pants by wulax, recolors and edits to v3 base by bluecarrot16, climb/jump/run/sit/emotes/revised combat by JaidynReiman based on ElizaWy's LPC Revised"
+    },
+    {
+      "fileName": "feet/shoes/sara/male/lavender.png",
+      "licenses": "OGA-BY 3.0,CC-BY 3.0+,GPL 2.0,GPL 3.0",
+      "authors": "JaidynReiman,Bluecarrot16,Mandi Paugh,Stephen Challener (Redshrike),William.Thompsonj",
+      "urls": "http://opengameart.org/content/sara-wizard,https://opengameart.org/content/lpc-sara,https://opengameart.org/content/lpc-expanded-socks-shoes",
+      "notes": "LPC Sara by Redshrike, contributed by William Thompsonj, Shoes Separated by Bluecarrot16, Male Version and Jump/Sit/Emote/Run/Revised Combat by JaidynReiman"
+    },
+    {
+      "fileName": "weapon/magic/gnarled/universal/foreground/medium.png",
+      "licenses": "OGA-BY 3.0+,GPL 3.0,CC-BY 4.0",
+      "authors": "bluecarrot16",
+      "urls": "https://opengameart.org/content/lpc-more-weapons",
+      "notes": ""
+    },
+    {
+      "fileName": "weapon/magic/gnarled/universal/background/medium.png",
+      "licenses": "OGA-BY 3.0+,GPL 3.0,CC-BY 4.0",
+      "authors": "bluecarrot16",
+      "urls": "https://opengameart.org/content/lpc-more-weapons",
+      "notes": ""
+    },
+    {
+      "fileName": "weapon/magic/gnarled/thrust/foreground/medium.png",
+      "licenses": "OGA-BY 3.0+,GPL 3.0,CC-BY 4.0",
+      "authors": "bluecarrot16",
+      "urls": "https://opengameart.org/content/lpc-more-weapons",
+      "notes": ""
+    },
+    {
+      "fileName": "weapon/magic/gnarled/thrust/background/medium.png",
+      "licenses": "OGA-BY 3.0+,GPL 3.0,CC-BY 4.0",
+      "authors": "bluecarrot16",
+      "urls": "https://opengameart.org/content/lpc-more-weapons",
+      "notes": ""
+    }
+  ],
+  "layers": [
+    {
+      "fileName": "weapon/magic/gnarled/thrust/background/medium.png",
+      "zPos": -1,
+      "custom_animation": "thrust_oversize",
+      "parentName": "weapon",
+      "name": "Gnarled_staff",
+      "variant": "medium",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering"
+    },
+    {
+      "fileName": "shadow/adult/shadow.png",
+      "zPos": 0,
+      "parentName": "shadow",
+      "name": "Shadow",
+      "variant": "shadow",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering"
+    },
+    {
+      "fileName": "cape/solid_behind/lavender.png",
+      "zPos": 5,
+      "parentName": "cape",
+      "name": "Solid",
+      "variant": "lavender",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering"
+    },
+    {
+      "fileName": "weapon/magic/gnarled/universal/background/medium.png",
+      "zPos": 9,
+      "parentName": "weapon",
+      "name": "Gnarled_staff",
+      "variant": "medium",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering"
+    },
+    {
+      "fileName": "body/bodies/male/light.png",
+      "zPos": 10,
+      "parentName": "body",
+      "name": "Body_color",
+      "variant": "light",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    },
+    {
+      "fileName": "feet/shoes/sara/male/lavender.png",
+      "zPos": 15,
+      "parentName": "shoes",
+      "name": "Sara_Shoes",
+      "variant": "lavender",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    },
+    {
+      "fileName": "legs/pants/male/lavender.png",
+      "zPos": 20,
+      "parentName": "legs",
+      "name": "Pants",
+      "variant": "lavender",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    },
+    {
+      "fileName": "torso/clothes/longsleeve/longsleeve/male/lavender.png",
+      "zPos": 35,
+      "parentName": "clothes",
+      "name": "Longsleeve",
+      "variant": "lavender",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    },
+    {
+      "fileName": "torso/jacket/tabard/male/lavender.png",
+      "zPos": 55,
+      "parentName": "jacket",
+      "name": "Tabard",
+      "variant": "lavender",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering"
+    },
+    {
+      "fileName": "torso/armour/leather/male/lavender.png",
+      "zPos": 60,
+      "parentName": "armour",
+      "name": "Leather",
+      "variant": "lavender",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering"
+    },
+    {
+      "fileName": "bauldron/male/charcoal.png",
+      "zPos": 65,
+      "parentName": "bauldron",
+      "name": "Bauldron",
+      "variant": "charcoal",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering"
+    },
+    {
+      "fileName": "torso/waist/obi/male/lavender.png",
+      "zPos": 65,
+      "parentName": "sash",
+      "name": "Obi",
+      "variant": "lavender",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    },
+    {
+      "fileName": "torso/waist/obi/knot/right/male/lavender.png",
+      "zPos": 66,
+      "parentName": "sash_tie",
+      "name": "Obi_Knot_Right",
+      "variant": "lavender",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    },
+    {
+      "fileName": "arms/gloves/male/lavender.png",
+      "zPos": 70,
+      "parentName": "gloves",
+      "name": "Gloves",
+      "variant": "lavender",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    },
+    {
+      "fileName": "cape/solid/female/lavender.png",
+      "zPos": 85,
+      "parentName": "cape",
+      "name": "Solid",
+      "variant": "lavender",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering"
+    },
+    {
+      "fileName": "cape/trim/female/lavender.png",
+      "zPos": 90,
+      "parentName": "cape_trim",
+      "name": "Cape_Trim",
+      "variant": "lavender",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering"
+    },
+    {
+      "fileName": "head/heads/human/male_plump/light.png",
+      "zPos": 100,
+      "parentName": "head",
+      "name": "Human_male_plump",
+      "variant": "light",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    },
+    {
+      "fileName": "beards/beard/winter/male/white.png",
+      "zPos": 110,
+      "parentName": "beard",
+      "name": "Winter_Beard",
+      "variant": "white",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    },
+    {
+      "fileName": "facial/monocle/left/adult/iron.png",
+      "zPos": 115,
+      "parentName": "facial_left",
+      "name": "Left_Monocle",
+      "variant": "iron",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    },
+    {
+      "fileName": "hair/curtains_long/adult/white.png",
+      "zPos": 120,
+      "parentName": "hair",
+      "name": "Curtains_long",
+      "variant": "white",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    },
+    {
+      "fileName": "hat/magic/celestial/adult/lavender.png",
+      "zPos": 130,
+      "parentName": "hat",
+      "name": "Celestial_Wizard_Hat",
+      "variant": "lavender",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering,idle,jump,run,sit,emote,climb,combat,1h_slash,1h_backslash,1h_halfslash"
+    },
+    {
+      "fileName": "weapon/magic/gnarled/universal/foreground/medium.png",
+      "zPos": 140,
+      "parentName": "weapon",
+      "name": "Gnarled_staff",
+      "variant": "medium",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering"
+    },
+    {
+      "fileName": "weapon/magic/gnarled/thrust/foreground/medium.png",
+      "zPos": 150,
+      "custom_animation": "thrust_oversize",
+      "parentName": "weapon",
+      "name": "Gnarled_staff",
+      "variant": "medium",
+      "supportedAnimations": "spellcast,thrust,walk,slash,shoot,hurt,watering"
+    }
+  ]
+}

@@ -113,6 +113,29 @@ func (sbam *StatusBarAnimationManager) GetManaFrames() []*ebiten.Image {
 	return frames
 }
 
+func (sbam *StatusBarAnimationManager) HasHearts(t string) bool {
+	dfaIndex := 0
+	var dfas []*DFA
+
+	if t == "health" {
+		dfas = sbam.heartDFAs
+	}
+
+	if t == "mana" {
+		dfas = sbam.manaDFAs
+	}
+
+	for dfaIndex < len(dfas) {
+		dfa := dfas[dfaIndex]
+
+		if dfa.HasNextState("reduce") {
+			return true
+		}
+		dfaIndex++
+	}
+	return false
+}
+
 func (sbam *StatusBarAnimationManager) DecrementHeart(amount int, t string) {
 	dfaIndex := 0
 	var dfas []*DFA

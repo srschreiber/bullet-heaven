@@ -150,6 +150,7 @@ func (g *Game) Update() error {
 	}
 
 	// weapons & projectiles
+	shot := false
 	for i := range g.Player.Weapons {
 		w := &g.Player.Weapons[i]
 		w.TimeSinceFire += dt
@@ -172,10 +173,11 @@ func (g *Game) Update() error {
 		}
 		w.Projectiles = newProjectiles
 
-		// fire when cooldown elapses
-		if w.TimeSinceFire >= w.CooldownSec {
+		// fire when cooldown elapses if holding mouse button
+		hasMana := statusBarAnimationManager.HasHearts("mana")
+		if hasMana && w.TimeSinceFire >= w.CooldownSec && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			w.TimeSinceFire = 0 + (rand.Float32()*2-1)*0.1*w.CooldownSec // add some randomness to rate of fire
-
+			shot = true
 			newProj := *w.ProjectileInstance
 			newProj.Pos = g.Player.Pos
 
@@ -198,6 +200,10 @@ func (g *Game) Update() error {
 			}
 		}
 		w.ParticleEmitter.Update(dt)
+	}
+
+	if shot {
+		statusBarAnimationManager.DecrementHeart(1, "mana")
 	}
 
 	heroAnimationManager.UpdateByDirection(float64(g.Player.Direction.X), float64(g.Player.Direction.Y), time.Duration(dt*1000)*time.Millisecond)
@@ -370,8 +376,8 @@ func main() {
 		Weapons:   []Weapon{fireWeapon},
 		MaxHealth: 5,
 		Health:    5,
-		MaxMana:   5,
-		Mana:      5,
+		MaxMana:   2,
+		Mana:      2,
 	}
 
 	// -- Set up animators --
@@ -380,6 +386,7 @@ func main() {
 
 	statusBarAnimationManager.DecrementHeart(900, "health")
 	statusBarAnimationManager.IncrementHeart(10, "health")
+
 	game := &Game{
 		ScreenWidth:  logicalW,
 		ScreenHeight: logicalH,

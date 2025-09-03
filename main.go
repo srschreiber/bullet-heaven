@@ -378,7 +378,8 @@ func main() {
 	heroAnimationManager = util.NewCharacterWalkAnimator(heroImagePath)
 	statusBarAnimationManager = util.NewStatusBarAnimationManager("assets/toolbar/health.png", "assets/toolbar/mana.png", player.MaxHealth, player.MaxMana)
 
-	statusBarAnimationManager.DecrementHeart(7, "health")
+	statusBarAnimationManager.DecrementHeart(900, "health")
+	statusBarAnimationManager.IncrementHeart(10, "health")
 	game := &Game{
 		ScreenWidth:  logicalW,
 		ScreenHeight: logicalH,

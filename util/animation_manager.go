@@ -160,7 +160,6 @@ func (sbam *StatusBarAnimationManager) DecrementHeart(amount int, t string) {
 }
 
 func (sbam *StatusBarAnimationManager) IncrementHeart(amount int, t string) {
-	dfaIndex := len(sbam.heartDFAs) - 1
 	var dfas []*DFA
 
 	if t == "health" {
@@ -168,7 +167,7 @@ func (sbam *StatusBarAnimationManager) IncrementHeart(amount int, t string) {
 	} else if t == "mana" {
 		dfas = sbam.manaDFAs
 	}
-
+	dfaIndex := len(dfas) - 1
 	for dfaIndex >= 0 && amount > 0 {
 		dfa := dfas[dfaIndex]
 

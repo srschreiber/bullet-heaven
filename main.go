@@ -80,14 +80,16 @@ func (v *Vec2) Distance(u *Vec2) float32 {
 // -------------------- Game types --------------------
 
 type Player struct {
-	Pos       *Vec2
-	Direction *Vec2
-	Speed     float32 // pixels per second
-	Weapons   []Weapon
-	MaxHealth rune
-	Health    rune
-	MaxMana   rune
-	Mana      rune
+	Pos               *Vec2
+	Direction         *Vec2
+	Speed             float32 // pixels per second
+	Weapons           []Weapon
+	MaxHealth         rune
+	Health            rune
+	MaxMana           rune
+	Mana              rune
+	ManaRegenRate     float32 // mana per second
+	ManaRegenCooldown time.Duration
 }
 
 type Projectile struct {
@@ -204,6 +206,12 @@ func (g *Game) Update() error {
 
 	if shot {
 		statusBarAnimationManager.DecrementHeart(1, "mana")
+	}
+
+	g.Player.ManaRegenCooldown -= time.Duration(dt*1000) * time.Millisecond
+	if g.Player.ManaRegenCooldown <= 0 {
+		g.Player.ManaRegenCooldown = time.Duration(1000/g.Player.ManaRegenRate) * time.Millisecond
+		statusBarAnimationManager.IncrementHeart(1, "mana")
 	}
 
 	heroAnimationManager.UpdateByDirection(float64(g.Player.Direction.X), float64(g.Player.Direction.Y), time.Duration(dt*1000)*time.Millisecond)
@@ -370,14 +378,16 @@ func main() {
 	_, _ = smokeWeapon, earthWeapon // silence unused
 
 	player := Player{
-		Pos:       &Vec2{X: 100, Y: 100},
-		Direction: Vec2Zero,
-		Speed:     80, // px/sec
-		Weapons:   []Weapon{fireWeapon},
-		MaxHealth: 5,
-		Health:    5,
-		MaxMana:   2,
-		Mana:      2,
+		Pos:               &Vec2{X: 100, Y: 100},
+		Direction:         Vec2Zero,
+		Speed:             80, // px/sec
+		Weapons:           []Weapon{fireWeapon},
+		MaxHealth:         5,
+		Health:            5,
+		MaxMana:           2,
+		Mana:              2,
+		ManaRegenRate:     .2, // mana per second
+		ManaRegenCooldown: 0,
 	}
 
 	// -- Set up animators --

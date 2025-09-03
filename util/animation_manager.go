@@ -37,7 +37,7 @@ Assume it is 4x9 in order, and each frame is 8x8 pixels.
 func loadDFA(spritSheetPath string, row int, numCols int, width int, nextInput string, previousInput string) *DFA {
 	col := 0
 	var start *state
-	var curState *state
+	var prevState *state
 	for col < numCols {
 		rect := image.Rect(col*width, row*width, (col+1)*width, (row+1)*width)
 		spriteSheet, _, err := ebitenutil.NewImageFromFile(spritSheetPath)
@@ -45,16 +45,18 @@ func loadDFA(spritSheetPath string, row int, numCols int, width int, nextInput s
 			log.Fatal(err)
 		}
 		frame := spriteSheet.SubImage(rect).(*ebiten.Image)
-		nextState := NewState("frame"+strconv.Itoa(col), frame)
-		if curState != nil {
-			curState.AddTransition(nextInput, nextState)
-			// add transition back to where came from
-			nextState.AddTransition(previousInput, curState)
+		curState := NewState("frame"+strconv.Itoa(col), frame)
+
+		if prevState != nil {
+			prevState.AddTransition(nextInput, curState)
+			curState.AddTransition(previousInput, prevState)
 		}
-		curState = nextState
+
 		if start == nil {
 			start = curState
 		}
+
+		prevState = curState
 		col++
 	}
 	return &DFA{
@@ -78,17 +80,15 @@ func NewCharacterWalkAnimator(spriteSheet string) *AnimationManager {
 	}
 }
 
-func NewStatusBarAnimationManager(heartSpriteSheet string, manaSpriteSheet string, numHearts int, numMana int) *StatusBarAnimationManager {
+func NewStatusBarAnimationManager(heartSpriteSheet string, manaSpriteSheet string, numHearts rune, numMana rune) *StatusBarAnimationManager {
 	heartDFAs := make([]*DFA, 0, numHearts)
-	for i := 0; i < numHearts; i++ {
-		heartDFAs = append(heartDFAs, loadDFA(heartSpriteSheet, i, 0, 32, "reduce", "increase"))
+	for i := 0; i < int(numHearts); i++ {
+		heartDFAs = append(heartDFAs, loadDFA(heartSpriteSheet, 0, 5, 32, "reduce", "increase"))
 	}
 
 	manaDFAs := make([]*DFA, 0, numMana)
-	for i := 0; i < numMana; i++ {
-		manaDFAs = append(manaDFAs, loadDFA(manaSpriteSheet, i, 0, 32, "reduce", "increase"))
-		// one for increase
-		manaDFAs = append(manaDFAs, loadDFA(manaSpriteSheet, i, 0, 32, "red", "increase"))
+	for i := 0; i < int(numMana); i++ {
+		manaDFAs = append(manaDFAs, loadDFA(manaSpriteSheet, 0, 5, 32, "reduce", "increase"))
 	}
 
 	return &StatusBarAnimationManager{

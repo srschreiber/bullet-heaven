@@ -28,6 +28,8 @@ var earthImage *ebiten.Image
 var smokeImage *ebiten.Image
 var fireImage *ebiten.Image
 var heroAnimationManager *util.AnimationManager
+var statusBarAnimationManager *util.StatusBarAnimationManager
+
 var heroImagePath = "assets/characters/wizard/standard/walk.png"
 
 func loadImage(path string) *ebiten.Image {
@@ -82,6 +84,10 @@ type Player struct {
 	Direction *Vec2
 	Speed     float32 // pixels per second
 	Weapons   []Weapon
+	MaxHealth rune
+	Health    rune
+	MaxMana   rune
+	Mana      rune
 }
 
 type Projectile struct {
@@ -221,6 +227,23 @@ func (g *Game) drawScene(dst *ebiten.Image) {
 	for _, w := range g.Player.Weapons {
 		w.ParticleEmitter.Draw(dst)
 	}
+
+	// Render the hearts
+	// op := &ebiten.DrawImageOptions{}
+	// op.GeoM.Translate(float64(i*32), 0)
+	// dst.DrawImage(frame, op)
+
+	for i, frame := range statusBarAnimationManager.GetHeartFrames() {
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(5+float64(i*35), float64(g.ScreenHeight)-32-64)
+		dst.DrawImage(frame, op)
+	}
+
+	for i, frame := range statusBarAnimationManager.GetManaFrames() {
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(5+float64(i*35), float64(g.ScreenHeight)-32-16)
+		dst.DrawImage(frame, op)
+	}
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
@@ -279,8 +302,6 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func main() {
 	Init()
-	heroAnimationManager = util.NewCharacterWalkAnimator(heroImagePath)
-
 	const (
 		logicalW = 320 * 4
 		logicalH = 240 * 4
@@ -342,16 +363,27 @@ func main() {
 
 	_, _ = smokeWeapon, earthWeapon // silence unused
 
+	player := Player{
+		Pos:       &Vec2{X: 100, Y: 100},
+		Direction: Vec2Zero,
+		Speed:     80, // px/sec
+		Weapons:   []Weapon{fireWeapon},
+		MaxHealth: 5,
+		Health:    5,
+		MaxMana:   5,
+		Mana:      5,
+	}
+
+	// -- Set up animators --
+	heroAnimationManager = util.NewCharacterWalkAnimator(heroImagePath)
+	statusBarAnimationManager = util.NewStatusBarAnimationManager("assets/toolbar/health.png", "assets/toolbar/mana.png", player.MaxHealth, player.MaxMana)
+
+	statusBarAnimationManager.DecrementHeart(7, "health")
 	game := &Game{
 		ScreenWidth:  logicalW,
 		ScreenHeight: logicalH,
-		Player: Player{
-			Pos:       &Vec2{X: 100, Y: 100},
-			Direction: Vec2Zero,
-			Speed:     80, // px/sec
-			Weapons:   []Weapon{fireWeapon},
-		},
-		startedAt: time.Now(),
+		Player:       player,
+		startedAt:    time.Now(),
 	}
 
 	sh, err := ebiten.NewShader([]byte(retroShaderSrc))

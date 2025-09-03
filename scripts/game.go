@@ -21,6 +21,12 @@ import (
 	_ "embed"
 )
 
+const (
+	logicalW = 320 * 4
+	logicalH = 240 * 4
+	scale    = 1
+)
+
 //go:embed shaders/retro.kage
 var retroShaderSrc []byte
 
@@ -29,6 +35,14 @@ var smokeImage *ebiten.Image
 var fireImage *ebiten.Image
 var heroAnimationManager *util.AnimationManager
 var statusBarAnimationManager *util.StatusBarAnimationManager
+var tilesPath = "assets/tiles"
+
+const tileW = 32
+
+var allTiles []*ebiten.Image
+var tileLayer [][]*ebiten.Image
+
+// tiles match FieldsTile_x.png, where x is from 1-64
 
 var heroImagePath = "assets/characters/wizard/standard/walk.png"
 
@@ -47,6 +61,17 @@ func loadImage(path string) *ebiten.Image {
 	return ebiten.NewImageFromImage(img)
 }
 
+func initAllTiles() {
+	for i := 1; i <= 64; i++ {
+		// If single digit, prefix with 0
+		path := fmt.Sprintf("%s/FieldsTile_%02d.png", tilesPath, i)
+		img := loadImage(path)
+		// convert it to 32x32
+		img = img.SubImage(image.Rect(0, 0, tileW, tileW)).(*ebiten.Image)
+		allTiles = append(allTiles, img)
+	}
+}
+
 func Init() {
 	const earthImagePath = "assets/earth.png"
 	const smokeImagePath = "assets/smoke.png"
@@ -55,6 +80,16 @@ func Init() {
 	earthImage = loadImage(earthImagePath)
 	smokeImage = loadImage(smokeImagePath)
 	fireImage = loadImage(fireImagePath)
+
+	initAllTiles()
+	// Create the map
+	tileLayer = make([][]*ebiten.Image, logicalH/tileW)
+	for i := range tileLayer {
+		tileLayer[i] = make([]*ebiten.Image, logicalW/tileW)
+		for j := range tileLayer[i] {
+			tileLayer[i][j] = allTiles[rand.Intn(len(allTiles))]
+		}
+	}
 }
 
 // -------------------- Game types --------------------
@@ -89,6 +124,16 @@ func (g *Game) drawScene(dst *ebiten.Image) {
 	ebitenutil.DrawRect(dst, 0, 0, float64(g.ScreenWidth), float64(g.ScreenHeight),
 		color.RGBA{R: 0, G: 100, B: 200, A: 255})
 
+	// draw the tiles
+	for i := range tileLayer {
+		for j := range tileLayer[i] {
+			tile := tileLayer[i][j]
+			op := &ebiten.DrawImageOptions{}
+			op.GeoM.Translate(float64(j*tileW), float64(i*tileW))
+			dst.DrawImage(tile, op)
+		}
+	}
+
 	// player (16x16 square)
 	const w = 16.0
 
@@ -106,11 +151,6 @@ func (g *Game) drawScene(dst *ebiten.Image) {
 	for _, w := range g.Player.Weapons {
 		w.ParticleEmitter.Draw(dst)
 	}
-
-	// Render the hearts
-	// op := &ebiten.DrawImageOptions{}
-	// op.GeoM.Translate(float64(i*32), 0)
-	// dst.DrawImage(frame, op)
 
 	for i, frame := range statusBarAnimationManager.GetHeartFrames() {
 		op := &ebiten.DrawImageOptions{}
@@ -135,22 +175,24 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	// pass uniforms
 	t := float32(time.Since(g.startedAt).Seconds())
 
+	// aberration based on health
+
 	uniforms := map[string]interface{}{
 		"Time":       t,
 		"Resolution": []float32{float32(g.ScreenWidth), float32(g.ScreenHeight)},
 
 		// nice VS-ish defaults — tweak live
 		"PixelSize":    float32(1),               // 1..4
-		"Vignette":     float32(0.4),             // 0..1
-		"Grain":        float32(0.07),            // 0..0.4
-		"Bloom":        float32(0.55),            // 0..1
-		"Aberration":   float32(0.0003),          // 0..0.005
-		"Saturation":   float32(1.1),             // 0.8..1.3
-		"Contrast":     float32(1.2),             // 0.9..1.2
-		"Gamma":        float32(1.2),             // 0.9..1.4
-		"Border":       float32(1.5),             // intensity (try 0.8–1.5)
-		"BorderClamp":  float32(.3),              // max darken (0.15–0.35)
-		"BorderRadius": float32(1),               // neighbor distance in px (1–2)
+		"Vignette":     float32(0.1),             // 0..1
+		"Grain":        float32(0.4),             // 0..0.4
+		"Bloom":        float32(0.1),             // 0..1
+		"Aberration":   float32(0.0005),          // 0..0.005
+		"Saturation":   float32(.81),             // 0.8..1.3
+		"Contrast":     float32(1),               // 0.9..1.2
+		"Gamma":        float32(.8),              // 0.9..1.4
+		"Border":       float32(1),               // intensity (try 0.8–1.5)
+		"BorderClamp":  float32(1),               // max darken (0.15–0.35)
+		"BorderRadius": float32(.1),              // neighbor distance in px (1–2)
 		"BorderTint":   []float32{0.0, 0.0, 0.0}, // black
 	}
 
@@ -181,11 +223,6 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func StartGame() {
 	Init()
-	const (
-		logicalW = 320 * 4
-		logicalH = 240 * 4
-		scale    = 1
-	)
 
 	ebiten.SetWindowSize(logicalW*scale, logicalH*scale)
 	ebiten.SetWindowTitle("Smoke Particles Demo")

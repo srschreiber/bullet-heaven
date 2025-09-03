@@ -279,7 +279,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func main() {
 	Init()
-	heroAnimationManager = util.NewAnimationManager(heroImagePath)
+	heroAnimationManager = util.NewCharacterWalkAnimator(heroImagePath)
 
 	const (
 		logicalW = 320 * 4

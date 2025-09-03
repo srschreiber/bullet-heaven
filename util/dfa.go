@@ -28,6 +28,15 @@ func (s *state) AddTransition(input string, nextState *state) *state {
 	return s.transitions[input]
 }
 
+func (dfa *DFA) HasNextState(input string) bool {
+	if dfa.currentState != nil {
+		if _, ok := dfa.currentState.transitions[input]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 func (dfa *DFA) NextState(input string) *state {
 	if dfa.currentState != nil {
 		if nextState, ok := dfa.currentState.transitions[input]; ok {

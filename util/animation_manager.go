@@ -23,11 +23,18 @@ type AnimationManager struct {
 	timeInState time.Duration
 }
 
+type StatusBarAnimationManager struct {
+	// number of hearts
+	heartDFAs []*DFA
+	// number of mana
+	manaDFAs []*DFA
+}
+
 /*
 Load the sprite sheet.
 Assume it is 4x9 in order, and each frame is 8x8 pixels.
 */
-func loadDFA(spritSheetPath string, row int, numCols int, width int, input string) *DFA {
+func loadDFA(spritSheetPath string, row int, numCols int, width int, nextInput string, previousInput string) *DFA {
 	col := 0
 	var start *state
 	var curState *state
@@ -40,7 +47,9 @@ func loadDFA(spritSheetPath string, row int, numCols int, width int, input strin
 		frame := spriteSheet.SubImage(rect).(*ebiten.Image)
 		nextState := NewState("frame"+strconv.Itoa(col), frame)
 		if curState != nil {
-			curState.AddTransition(input, nextState)
+			curState.AddTransition(nextInput, nextState)
+			// add transition back to where came from
+			nextState.AddTransition(previousInput, curState)
 		}
 		curState = nextState
 		if start == nil {
@@ -54,11 +63,11 @@ func loadDFA(spritSheetPath string, row int, numCols int, width int, input strin
 	}
 }
 
-func NewAnimationManager(spriteSheet string) *AnimationManager {
-	upDFA := loadDFA(spriteSheet, 0, 9, 64, "step")
-	leftDFA := loadDFA(spriteSheet, 1, 9, 64, "step")
-	downDFA := loadDFA(spriteSheet, 2, 9, 64, "step")
-	rightDFA := loadDFA(spriteSheet, 3, 9, 64, "step")
+func NewCharacterWalkAnimator(spriteSheet string) *AnimationManager {
+	upDFA := loadDFA(spriteSheet, 0, 9, 64, "step", "backstep")
+	leftDFA := loadDFA(spriteSheet, 1, 9, 64, "step", "backstep")
+	downDFA := loadDFA(spriteSheet, 2, 9, 64, "step", "backstep")
+	rightDFA := loadDFA(spriteSheet, 3, 9, 64, "step", "backstep")
 
 	return &AnimationManager{
 		walkingUpDFA:    upDFA,
@@ -66,6 +75,87 @@ func NewAnimationManager(spriteSheet string) *AnimationManager {
 		walkingDownDFA:  downDFA,
 		walkingRightDFA: rightDFA,
 		curDFA:          rightDFA,
+	}
+}
+
+func NewStatusBarAnimationManager(heartSpriteSheet string, manaSpriteSheet string, numHearts int, numMana int) *StatusBarAnimationManager {
+	heartDFAs := make([]*DFA, 0, numHearts)
+	for i := 0; i < numHearts; i++ {
+		heartDFAs = append(heartDFAs, loadDFA(heartSpriteSheet, i, 0, 32, "reduce", "increase"))
+	}
+
+	manaDFAs := make([]*DFA, 0, numMana)
+	for i := 0; i < numMana; i++ {
+		manaDFAs = append(manaDFAs, loadDFA(manaSpriteSheet, i, 0, 32, "reduce", "increase"))
+		// one for increase
+		manaDFAs = append(manaDFAs, loadDFA(manaSpriteSheet, i, 0, 32, "red", "increase"))
+	}
+
+	return &StatusBarAnimationManager{
+		heartDFAs: heartDFAs,
+		manaDFAs:  manaDFAs,
+	}
+}
+
+func (sbam *StatusBarAnimationManager) GetHeartFrames() []*ebiten.Image {
+	frames := make([]*ebiten.Image, 0, len(sbam.heartDFAs))
+	for _, dfa := range sbam.heartDFAs {
+		frames = append(frames, dfa.currentState.stateData.(*ebiten.Image))
+	}
+	return frames
+}
+
+func (sbam *StatusBarAnimationManager) GetManaFrames() []*ebiten.Image {
+	frames := make([]*ebiten.Image, 0, len(sbam.manaDFAs))
+	for _, dfa := range sbam.manaDFAs {
+		frames = append(frames, dfa.currentState.stateData.(*ebiten.Image))
+	}
+	return frames
+}
+
+func (sbam *StatusBarAnimationManager) DecrementHeart(amount int, t string) {
+	dfaIndex := 0
+	var dfas []*DFA
+
+	if t == "health" {
+		dfas = sbam.heartDFAs
+	} else if t == "mana" {
+		dfas = sbam.manaDFAs
+	}
+
+	for dfaIndex < len(dfas) && amount > 0 {
+		dfa := dfas[dfaIndex]
+
+		if dfa.HasNextState("reduce") {
+			dfa.currentState = dfa.NextState("reduce")
+			amount--
+		} else {
+			// already depleted
+			dfaIndex++
+		}
+	}
+}
+
+func (sbam *StatusBarAnimationManager) IncrementHeart(amount int, t string) {
+	dfaIndex := len(sbam.heartDFAs) - 1
+	var dfas []*DFA
+
+	if t == "health" {
+		dfas = sbam.heartDFAs
+	} else if t == "mana" {
+		dfas = sbam.manaDFAs
+	}
+
+	for dfaIndex >= 0 && amount > 0 {
+		dfa := dfas[dfaIndex]
+
+		if dfa.HasNextState("increase") {
+			dfa.currentState = dfa.NextState("increase")
+			amount--
+		} else {
+			// already depleted
+			dfaIndex--
+		}
 	}
 }
 

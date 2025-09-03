@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"game/util"
 	"image"
 	"image/color"
 	"log"
@@ -26,7 +27,8 @@ var retroShaderSrc []byte
 var earthImage *ebiten.Image
 var smokeImage *ebiten.Image
 var fireImage *ebiten.Image
-var heroImage *ebiten.Image
+var heroSheet *ebiten.Image
+var heroAnimationManager *util.AnimationManager
 
 func loadImage(path string) *ebiten.Image {
 	f, err := os.Open(path)
@@ -47,12 +49,12 @@ func Init() {
 	const earthImagePath = "assets/earth.png"
 	const smokeImagePath = "assets/smoke.png"
 	const fireImagePath = "assets/fire.png"
-	const heroImagePath = "assets/hero1.png"
+	const heroImagePath = "assets/hero1spritesheet.png"
 
 	earthImage = loadImage(earthImagePath)
 	smokeImage = loadImage(smokeImagePath)
 	fireImage = loadImage(fireImagePath)
-	heroImage = loadImage(heroImagePath)
+	heroSheet = loadImage(heroImagePath)
 }
 
 // walking enum
@@ -62,32 +64,6 @@ const (
 	HeroAnimWalkLeft         // 2
 	HeroAnimWalkDown         // 3
 )
-
-func getHeroAnim(state int) *ebiten.Image {
-	/* The image has 4 frames. We only care about the first row which has
-	 	Standing still, walking right.
-
-		If not moving, standing still.
-		If moving right, render walking right
-		If moving left, render walking right flipped
-		If moving down, render walking right for now
-	*/
-	var subImg *ebiten.Image
-
-	// first get w of image
-	w := heroImage.Bounds().Dx()
-	if state == HeroAnimIdle {
-		subImg = heroImage.SubImage(image.Rect(0, 0, w/2, w/2)).(*ebiten.Image)
-	} else if state == HeroAnimWalkRight {
-		subImg = heroImage.SubImage(image.Rect(w/2, 0, w, w/2)).(*ebiten.Image)
-	} else if state == HeroAnimWalkLeft {
-		subImg = heroImage.SubImage(image.Rect(w/2, 0, w, w/2)).(*ebiten.Image)
-	} else if state == HeroAnimWalkDown {
-		subImg = heroImage.SubImage(image.Rect(16, 0, 32, 16)).(*ebiten.Image)
-	}
-
-	return subImg
-}
 
 // -------------------- Math / Vec2 --------------------
 
@@ -228,6 +204,8 @@ func (g *Game) Update() error {
 		w.ParticleEmitter.Update(dt)
 	}
 
+	heroAnimationManager.UpdateByDirection(float64(g.Player.Direction.X), float64(g.Player.Direction.Y), time.Duration(dt*1000)*time.Millisecond)
+
 	return nil
 }
 
@@ -240,31 +218,40 @@ func (g *Game) drawScene(dst *ebiten.Image) {
 	const w = 16.0
 	// ebitenutil.DrawRect(dst, float64(g.Player.Pos.X-w/2), float64(g.Player.Pos.Y-w/2), float64(w), float64(w), color.White)
 	// check dir for what direction
-	var animSprite *ebiten.Image
-	if g.Player.Direction.X > 0 {
-		// facing right
-		animSprite = getHeroAnim(HeroAnimWalkRight)
-	} else if g.Player.Direction.X < 0 {
-		// facing left
-		animSprite = getHeroAnim(HeroAnimWalkLeft)
-	} else if g.Player.Direction.Y > 0 {
-		// facing down
-		animSprite = getHeroAnim(HeroAnimWalkDown)
-	} else {
-		animSprite = getHeroAnim(HeroAnimIdle)
-	}
+	// var animSprite *ebiten.Image
+	// if g.Player.Direction.X > 0 {
+	// 	// facing right
+	// 	animSprite = getHeroAnim(HeroAnimWalkRight)
+	// } else if g.Player.Direction.X < 0 {
+	// 	// facing left
+	// 	animSprite = getHeroAnim(HeroAnimWalkLeft)
+	// } else if g.Player.Direction.Y > 0 {
+	// 	// facing down
+	// 	animSprite = getHeroAnim(HeroAnimWalkDown)
+	// } else {
+	// 	animSprite = getHeroAnim(HeroAnimIdle)
+	// }
 
+	// op := &ebiten.DrawImageOptions{}
+	// // figure out how to scale it to 20
+	// tgtWidth := float64(20)
+	// l := animSprite.Bounds().Dx()
+	// s := float64(tgtWidth) / float64(l)
+	// op.GeoM.Scale(s, s)
+	// // op.GeoM.Translate(-tgtWidth/2, -tgtWidth/2)
+	// // op.GeoM.Translate(float64(g.Player.Pos.X), float64(g.Player.Pos.Y))
+
+	// dst.DrawImage(animSprite, op)
+	frame := heroAnimationManager.CurrentFrame()
 	op := &ebiten.DrawImageOptions{}
 	// figure out how to scale it to 20
 	tgtWidth := float64(20)
-	l := animSprite.Bounds().Dx()
+	l := frame.Bounds().Dx()
 	s := float64(tgtWidth) / float64(l)
 	op.GeoM.Scale(s, s)
 	op.GeoM.Translate(-tgtWidth/2, -tgtWidth/2)
 	op.GeoM.Translate(float64(g.Player.Pos.X), float64(g.Player.Pos.Y))
-
-	dst.DrawImage(animSprite, op)
-
+	dst.DrawImage(frame, op)
 	// particles
 	for _, w := range g.Player.Weapons {
 		w.ParticleEmitter.Draw(dst)
@@ -327,6 +314,17 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 
 func main() {
 	Init()
+	// Example for a 1×7 row, 64x64 each:
+	// [0]=Idle, [1]=Left L, [2]=Left Both, [3]=Left R, [4]=Right L, [5]=Right Both, [6]=Right R
+	frames := map[util.AnimationState]image.Rectangle{
+		util.WalkLeftLegForward:       image.Rect(1*64, 0, 2*64, 64),
+		util.WalkLeftBothFeetTogether: image.Rect(2*64, 0, 3*64, 64),
+		util.WalkLeftRightLegForward:  image.Rect(3*64, 0, 4*64, 64),
+		util.WalkRightLegForward:      image.Rect(4*64, 0, 5*64, 64),
+		util.WalkRightFeetTogether:    image.Rect(5*64, 0, 6*64, 64),
+		util.WalkRightLeftLegForward:  image.Rect(6*64, 0, 7*64, 64),
+	}
+	heroAnimationManager = util.NewAnimationManager(heroSheet, frames, 800*time.Millisecond)
 
 	const (
 		logicalW = 320

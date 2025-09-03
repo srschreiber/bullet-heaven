@@ -62,25 +62,6 @@ type Vec2 = model.Vec2
 
 var Vec2Zero = model.Vec2Zero
 
-type Player struct {
-	Pos               *Vec2
-	Direction         *Vec2
-	Speed             float32 // pixels per second
-	Weapons           []Weapon
-	MaxHealth         rune
-	Health            rune
-	MaxMana           rune
-	Mana              rune
-	ManaRegenRate     float32 // mana per second
-	ManaRegenCooldown time.Duration
-	StrifeDuration    float32 // length
-	StrifeTime        float32
-	LastStrife        time.Time
-	StrifeCooldown    time.Duration
-	StrifeMultiplier  float32
-	StrifeDecay       float32 // loss of speed
-}
-
 type Game struct {
 	Player       Player
 	ScreenWidth  int
@@ -95,129 +76,12 @@ type Game struct {
 
 const TargetTPS = 120.0
 
-func (g *Game) UpdatePlayer(dt float32) error {
-	cursorX, cursorY := ebiten.CursorPosition()
-	cursor := &Vec2{float32(cursorX), float32(cursorY)}
-	if g.Player.Pos.Distance(cursor) < 5 {
-		cursor = g.Player.Pos
-	}
-
-	// smooth player movement
-	g.Player.Direction = cursor.Sub(g.Player.Pos).Norm()
-	vel := g.Player.Direction.Mul(g.Player.Speed * dt)
-
-	// Tick/update
-	now := time.Now()
-
-	// 1) Update current strife state first
-	if g.Player.StrifeTime > 0 {
-		g.Player.StrifeTime -= dt
-		timeInStrife := g.Player.StrifeDuration - g.Player.StrifeTime
-
-		mult := g.Player.StrifeMultiplier - timeInStrife*g.Player.StrifeDecay
-		if mult < 1 {
-			mult = 1
-		}
-		newVel := vel.Mul(mult)
-		vel = newVel
-
-		// detect end-of-strife transition
-		if g.Player.StrifeTime <= 0 {
-			g.Player.StrifeTime = 0
-			g.Player.LastStrife = now
-		}
-	} else {
-		g.Player.StrifeTime = 0 // clamp (in case it went negative)
-	}
-
-	// 2) After updating, check if we can start a new strife
-	// Prefer edge-trigger to avoid hold-to-retrigger
-	if ebiten.IsKeyPressed(ebiten.KeyShiftLeft) &&
-		now.After(g.Player.LastStrife.Add(g.Player.StrifeCooldown)) &&
-		g.Player.StrifeTime == 0 {
-		g.Player.StrifeTime = g.Player.StrifeDuration
-	}
-
-	half := 16
-	if g.Player.Pos.Add(vel).IsInBounds(g.ScreenHeight, g.ScreenWidth, half) {
-		g.Player.Pos = g.Player.Pos.Add(vel)
-	} else if g.Player.Pos.Add(&Vec2{X: vel.X}).IsInBounds(g.ScreenHeight, g.ScreenWidth, half) {
-		g.Player.Pos = g.Player.Pos.Add(&Vec2{X: vel.X})
-	} else if g.Player.Pos.Add(&Vec2{Y: vel.Y}).IsInBounds(g.ScreenHeight, g.ScreenWidth, half) {
-		g.Player.Pos = g.Player.Pos.Add(&Vec2{Y: vel.Y})
-	}
-
-	// weapons & projectiles
-	shot := false
-	for i := range g.Player.Weapons {
-		w := &g.Player.Weapons[i]
-		w.TimeSinceFire += dt
-
-		// move + cull + emit smoke
-		newProjectiles := w.Projectiles[:0]
-		for j := range w.Projectiles {
-			p := &w.Projectiles[j]
-
-			// integrate motion
-			p.Pos = p.Pos.Add(p.Dir.Mul(p.Speed * dt))
-
-			w.ParticleEmitter.EmitDirectional(p.Pos, p.Dir, 2, p.Speed)
-
-			// keep if on-screen
-			if p.Pos.IsInBounds(g.ScreenHeight, g.ScreenWidth, 0) {
-				newProjectiles = append(newProjectiles, *p)
-			}
-
-		}
-		w.Projectiles = newProjectiles
-
-		// fire when cooldown elapses if holding mouse button
-		hasMana := statusBarAnimationManager.HasHearts("mana")
-		if hasMana && w.TimeSinceFire >= w.CooldownSec && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-			w.TimeSinceFire = 0 + (rand.Float32()*2-1)*0.1*w.CooldownSec // add some randomness to rate of fire
-			shot = true
-			newProj := *w.ProjectileInstance
-			newProj.Pos = g.Player.Pos
-
-			newProj.Dir = g.Player.Direction.Norm()
-			// get last direction
-			isMoving := newProj.Dir != Vec2Zero
-
-			if !isMoving {
-				newProj.Dir = w.LastDir
-			}
-
-			// add some randomness
-			randomizedVec := &Vec2{X: (rand.Float32()*2 - 1) * 0.5, Y: (rand.Float32()*2 - 1) * 0.5}
-			randomizedVec = randomizedVec.Norm().Mul(.1)
-			newProj.Dir = newProj.Dir.Add(randomizedVec).Norm()
-
-			w.Projectiles = append(w.Projectiles, newProj)
-			if isMoving {
-				w.LastDir = g.Player.Direction.Norm()
-			}
-		}
-		w.ParticleEmitter.Update(dt)
-	}
-
-	if shot {
-		statusBarAnimationManager.DecrementHeart(1, "mana")
-	}
-
-	g.Player.ManaRegenCooldown -= time.Duration(dt*1000) * time.Millisecond
-	if g.Player.ManaRegenCooldown <= 0 {
-		g.Player.ManaRegenCooldown = time.Duration(1000/g.Player.ManaRegenRate) * time.Millisecond
-		statusBarAnimationManager.IncrementHeart(1, "mana")
-	}
-
-	heroAnimationManager.UpdateByDirection(float64(g.Player.Direction.X), float64(g.Player.Direction.Y), time.Duration(dt*1000)*time.Millisecond)
-
-	return nil
-}
+var GameInstance *Game
 
 func (g *Game) Update() error {
 	dt := float32(1.0 / TargetTPS)
-	return g.UpdatePlayer(dt)
+	g.Player.Update(dt)
+	return nil
 }
 
 func (g *Game) drawScene(dst *ebiten.Image) {
@@ -411,6 +275,8 @@ func StartGame() {
 		Player:       player,
 		startedAt:    time.Now(),
 	}
+
+	GameInstance = game
 
 	sh, err := ebiten.NewShader([]byte(retroShaderSrc))
 	if err != nil {

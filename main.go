@@ -76,6 +76,9 @@ func (v *Vec2) Mul(s float32) *Vec2 { return &Vec2{v.X * s, v.Y * s} }
 func (v *Vec2) Distance(u *Vec2) float32 {
 	return float32(math.Hypot(float64(v.X-u.X), float64(v.Y-u.Y)))
 }
+func (v *Vec2) Length() float32 {
+	return float32(math.Hypot(float64(v.X), float64(v.Y)))
+}
 
 // -------------------- Game types --------------------
 
@@ -90,6 +93,12 @@ type Player struct {
 	Mana              rune
 	ManaRegenRate     float32 // mana per second
 	ManaRegenCooldown time.Duration
+	StrifeDuration    float32 // length
+	StrifeTime        float32
+	LastStrife        time.Time
+	StrifeCooldown    time.Duration
+	StrifeMultiplier  float32
+	StrifeDecay       float32 // loss of speed
 }
 
 type Projectile struct {
@@ -141,6 +150,38 @@ func (g *Game) Update() error {
 	// smooth player movement
 	g.Player.Direction = cursor.Sub(g.Player.Pos).Norm()
 	vel := g.Player.Direction.Mul(g.Player.Speed * dt)
+
+	// Tick/update
+	now := time.Now()
+
+	// 1) Update current strife state first
+	if g.Player.StrifeTime > 0 {
+		g.Player.StrifeTime -= dt
+		timeInStrife := g.Player.StrifeDuration - g.Player.StrifeTime
+
+		mult := g.Player.StrifeMultiplier - timeInStrife*g.Player.StrifeDecay
+		if mult < 1 {
+			mult = 1
+		}
+		newVel := vel.Mul(mult)
+		vel = newVel
+
+		// detect end-of-strife transition
+		if g.Player.StrifeTime <= 0 {
+			g.Player.StrifeTime = 0
+			g.Player.LastStrife = now
+		}
+	} else {
+		g.Player.StrifeTime = 0 // clamp (in case it went negative)
+	}
+
+	// 2) After updating, check if we can start a new strife
+	// Prefer edge-trigger to avoid hold-to-retrigger
+	if ebiten.IsKeyPressed(ebiten.KeyShiftLeft) &&
+		now.After(g.Player.LastStrife.Add(g.Player.StrifeCooldown)) &&
+		g.Player.StrifeTime == 0 {
+		g.Player.StrifeTime = g.Player.StrifeDuration
+	}
 
 	half := 16
 	if g.Player.Pos.Add(vel).IsInBounds(g, half) {
@@ -388,6 +429,13 @@ func main() {
 		Mana:              2,
 		ManaRegenRate:     .2, // mana per second
 		ManaRegenCooldown: 0,
+		StrifeDuration:    1.5,             // length
+		StrifeCooldown:    time.Second * 1, // cooldown
+		StrifeMultiplier:  2.5,             // speed multiplier
+		StrifeDecay:       2,               // decay rate
+		LastStrife:        time.Now(),
+		StrifeTime:        0, // current time left in strife
+
 	}
 
 	// -- Set up animators --

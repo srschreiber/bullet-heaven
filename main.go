@@ -111,11 +111,7 @@ type Game struct {
 
 const TargetTPS = 120.0
 
-func (g *Game) Update() error {
-	// fixed dt tied to TargetTPS
-	dt := float32(1.0 / TargetTPS)
-
-	// aim at cursor (logical coords)
+func (g *Game) UpdatePlayer(dt float32) error {
 	cursorX, cursorY := ebiten.CursorPosition()
 	cursor := &Vec2{float32(cursorX), float32(cursorY)}
 	if g.Player.Pos.Distance(cursor) < 5 {
@@ -233,6 +229,11 @@ func (g *Game) Update() error {
 	heroAnimationManager.UpdateByDirection(float64(g.Player.Direction.X), float64(g.Player.Direction.Y), time.Duration(dt*1000)*time.Millisecond)
 
 	return nil
+}
+
+func (g *Game) Update() error {
+	dt := float32(1.0 / TargetTPS)
+	return g.UpdatePlayer(dt)
 }
 
 func (g *Game) drawScene(dst *ebiten.Image) {

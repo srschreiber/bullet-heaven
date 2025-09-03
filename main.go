@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
+	"game/model"
 	"game/util"
 	"image"
 	"image/color"
 	"log"
-	"math"
 	"math/rand"
 	"os"
 	"time"
@@ -57,30 +57,10 @@ func Init() {
 	fireImage = loadImage(fireImagePath)
 }
 
-// -------------------- Math / Vec2 --------------------
-
-type Vec2 struct{ X, Y float32 }
-
-var Vec2Zero = &Vec2{0, 0}
-
-func (v *Vec2) Norm() *Vec2 {
-	m := math.Hypot(float64(v.X), float64(v.Y))
-	if m == 0 {
-		return Vec2Zero
-	}
-	return &Vec2{v.X / float32(m), v.Y / float32(m)}
-}
-func (v *Vec2) Add(u *Vec2) *Vec2   { return &Vec2{v.X + u.X, v.Y + u.Y} }
-func (v *Vec2) Sub(u *Vec2) *Vec2   { return &Vec2{v.X - u.X, v.Y - u.Y} }
-func (v *Vec2) Mul(s float32) *Vec2 { return &Vec2{v.X * s, v.Y * s} }
-func (v *Vec2) Distance(u *Vec2) float32 {
-	return float32(math.Hypot(float64(v.X-u.X), float64(v.Y-u.Y)))
-}
-func (v *Vec2) Length() float32 {
-	return float32(math.Hypot(float64(v.X), float64(v.Y)))
-}
-
 // -------------------- Game types --------------------
+type Vec2 = model.Vec2
+
+var Vec2Zero = model.Vec2Zero
 
 type Player struct {
 	Pos               *Vec2
@@ -125,11 +105,6 @@ type Game struct {
 	offscreen    *ebiten.Image
 	startedAt    time.Time
 	off          *ebiten.Image
-}
-
-func (v Vec2) IsInBounds(g *Game, buffer int) bool {
-	return v.X >= float32(buffer) && v.X < float32(g.ScreenWidth-buffer) &&
-		v.Y >= float32(buffer) && v.Y < float32(g.ScreenHeight-buffer)
 }
 
 // -------------------- Game loop --------------------
@@ -184,11 +159,11 @@ func (g *Game) Update() error {
 	}
 
 	half := 16
-	if g.Player.Pos.Add(vel).IsInBounds(g, half) {
+	if g.Player.Pos.Add(vel).IsInBounds(g.ScreenHeight, g.ScreenWidth, half) {
 		g.Player.Pos = g.Player.Pos.Add(vel)
-	} else if g.Player.Pos.Add(&Vec2{X: vel.X}).IsInBounds(g, half) {
+	} else if g.Player.Pos.Add(&Vec2{X: vel.X}).IsInBounds(g.ScreenHeight, g.ScreenWidth, half) {
 		g.Player.Pos = g.Player.Pos.Add(&Vec2{X: vel.X})
-	} else if g.Player.Pos.Add(&Vec2{Y: vel.Y}).IsInBounds(g, half) {
+	} else if g.Player.Pos.Add(&Vec2{Y: vel.Y}).IsInBounds(g.ScreenHeight, g.ScreenWidth, half) {
 		g.Player.Pos = g.Player.Pos.Add(&Vec2{Y: vel.Y})
 	}
 
@@ -209,7 +184,7 @@ func (g *Game) Update() error {
 			w.ParticleEmitter.EmitDirectional(p.Pos, p.Dir, 2, p.Speed)
 
 			// keep if on-screen
-			if p.Pos.IsInBounds(g, 0) {
+			if p.Pos.IsInBounds(g.ScreenHeight, g.ScreenWidth, 0) {
 				newProjectiles = append(newProjectiles, *p)
 			}
 

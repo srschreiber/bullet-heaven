@@ -3,7 +3,6 @@ package scripts
 import (
 	"fmt"
 	"game/model"
-	"game/util"
 	"image"
 	"image/color"
 	"log"
@@ -33,8 +32,8 @@ var retroShaderSrc []byte
 var earthImage *ebiten.Image
 var smokeImage *ebiten.Image
 var fireImage *ebiten.Image
-var heroAnimationManager *util.AnimationManager
-var statusBarAnimationManager *util.StatusBarAnimationManager
+var heroAnimationManager *WalkingAnimationManager
+var statusBarAnimationManager *StatusBarAnimationManager
 var tilesPath = "assets/tiles"
 
 const tileW = 32
@@ -45,6 +44,7 @@ var tileLayer [][]*ebiten.Image
 // tiles match FieldsTile_x.png, where x is from 1-64
 
 var heroImagePath = "assets/characters/wizard/standard/walk.png"
+var skeletonImagePath = "assets/enemies/skeletonspritesheet.png"
 
 func loadImage(path string) *ebiten.Image {
 	f, err := os.Open(path)
@@ -304,8 +304,8 @@ func StartGame() {
 	}
 
 	// -- Set up animators --
-	heroAnimationManager = util.NewCharacterWalkAnimator(heroImagePath)
-	statusBarAnimationManager = util.NewStatusBarAnimationManager("assets/toolbar/health.png", "assets/toolbar/mana.png", player.MaxHealth, player.MaxMana)
+	heroAnimationManager = NewCharacterWalkAnimator(heroImagePath)
+	statusBarAnimationManager = NewStatusBarAnimationManager("assets/toolbar/health.png", "assets/toolbar/mana.png", player.MaxHealth, player.MaxMana)
 
 	statusBarAnimationManager.DecrementHeart(900, "health")
 	statusBarAnimationManager.IncrementHeart(10, "health")

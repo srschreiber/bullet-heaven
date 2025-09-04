@@ -1,4 +1,4 @@
-package util
+package scripts
 
 type state struct {
 	// Define the fields for the DFA state

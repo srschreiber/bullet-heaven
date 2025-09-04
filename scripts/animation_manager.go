@@ -1,4 +1,4 @@
-package util
+package scripts
 
 import (
 	"image"
@@ -13,7 +13,7 @@ import (
 
 type AnimationState int
 
-type AnimationManager struct {
+type WalkingAnimationManager struct {
 	walkingLeftDFA  *DFA
 	walkingRightDFA *DFA
 	walkingUpDFA    *DFA
@@ -65,13 +65,13 @@ func loadDFA(spritSheetPath string, row int, numCols int, width int, nextInput s
 	}
 }
 
-func NewCharacterWalkAnimator(spriteSheet string) *AnimationManager {
+func NewCharacterWalkAnimator(spriteSheet string) *WalkingAnimationManager {
 	upDFA := loadDFA(spriteSheet, 0, 9, 64, "step", "backstep")
 	leftDFA := loadDFA(spriteSheet, 1, 9, 64, "step", "backstep")
 	downDFA := loadDFA(spriteSheet, 2, 9, 64, "step", "backstep")
 	rightDFA := loadDFA(spriteSheet, 3, 9, 64, "step", "backstep")
 
-	return &AnimationManager{
+	return &WalkingAnimationManager{
 		walkingUpDFA:    upDFA,
 		walkingLeftDFA:  leftDFA,
 		walkingDownDFA:  downDFA,
@@ -181,14 +181,14 @@ func (sbam *StatusBarAnimationManager) IncrementHeart(amount int, t string) {
 	}
 }
 
-func (am *AnimationManager) GetCurrentFrame() *ebiten.Image {
+func (am *WalkingAnimationManager) GetCurrentFrame() *ebiten.Image {
 	if am.curDFA != nil {
 		return am.curDFA.currentState.stateData.(*ebiten.Image)
 	}
 	return nil
 }
 
-func (am *AnimationManager) UpdateByDirection(dirX, dirY float64, dt time.Duration) {
+func (am *WalkingAnimationManager) UpdateByDirection(dirX, dirY float64, dt time.Duration) {
 	var nextDFA *DFA
 	am.timeInState += dt
 

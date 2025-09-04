@@ -43,8 +43,8 @@ var tileLayer [][]*ebiten.Image
 
 // tiles match FieldsTile_x.png, where x is from 1-64
 
-var heroImagePath = "assets/characters/wizard/standard/walk.png"
 var skeletonImagePath = "assets/enemies/skeletonspritesheet.png"
+var heroImagePath = "assets/characters/default.png"
 
 func loadImage(path string) *ebiten.Image {
 	f, err := os.Open(path)
@@ -304,7 +304,7 @@ func StartGame() {
 	}
 
 	// -- Set up animators --
-	heroAnimationManager = NewCharacterWalkAnimator(heroImagePath)
+	heroAnimationManager = NewCharacterWalkingAnimator(heroImagePath, 8)
 	statusBarAnimationManager = NewStatusBarAnimationManager("assets/toolbar/health.png", "assets/toolbar/mana.png", player.MaxHealth, player.MaxMana)
 
 	statusBarAnimationManager.DecrementHeart(900, "health")

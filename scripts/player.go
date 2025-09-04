@@ -161,7 +161,11 @@ func (p *Player) Update(dt float32) {
 		}
 	}
 
-	heroAnimationManager.UpdateByDirection(float64(p.Direction.X), float64(p.Direction.Y), time.Duration(dt*1000)*time.Millisecond)
+	if p.StrifeTime > 0 {
+		heroAnimationManager.UpdateByDirection(float64(p.Direction.X), float64(p.Direction.Y), time.Duration(dt*1000)*time.Millisecond, true)
+	} else {
+		heroAnimationManager.UpdateByDirection(float64(p.Direction.X), float64(p.Direction.Y), time.Duration(dt*1000)*time.Millisecond, false)
+	}
 
 	return
 }

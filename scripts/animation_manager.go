@@ -19,8 +19,10 @@ type WalkingAnimationManager struct {
 	walkingUpDFA    *DFA
 	walkingDownDFA  *DFA
 	// last dfa for when no input is received, or detecting when just arrived at new dfa (reset to start)
-	curDFA      *DFA
-	timeInState time.Duration
+	curDFA         *DFA
+	timeInState    time.Duration
+	strifeLeftDFA  *DFA
+	strifeRightDFA *DFA
 }
 
 type StatusBarAnimationManager struct {
@@ -34,11 +36,11 @@ type StatusBarAnimationManager struct {
 Load the sprite sheet.
 Assume it is 4x9 in order, and each frame is 8x8 pixels.
 */
-func loadDFA(spritSheetPath string, row int, numCols int, width int, nextInput string, previousInput string) *DFA {
-	col := 0
+func loadDFA(spritSheetPath string, row int, startCol int, numCols int, width int, nextInput string, previousInput string) *DFA {
+	col := startCol
 	var start *state
 	var prevState *state
-	for col < numCols {
+	for col-startCol < numCols {
 		rect := image.Rect(col*width, row*width, (col+1)*width, (row+1)*width)
 		spriteSheet, _, err := ebitenutil.NewImageFromFile(spritSheetPath)
 		if err != nil {
@@ -65,11 +67,14 @@ func loadDFA(spritSheetPath string, row int, numCols int, width int, nextInput s
 	}
 }
 
-func NewCharacterWalkAnimator(spriteSheet string) *WalkingAnimationManager {
-	upDFA := loadDFA(spriteSheet, 0, 9, 64, "step", "backstep")
-	leftDFA := loadDFA(spriteSheet, 1, 9, 64, "step", "backstep")
-	downDFA := loadDFA(spriteSheet, 2, 9, 64, "step", "backstep")
-	rightDFA := loadDFA(spriteSheet, 3, 9, 64, "step", "backstep")
+func NewCharacterWalkingAnimator(spriteSheet string, startRow int) *WalkingAnimationManager {
+	upDFA := loadDFA(spriteSheet, startRow, 0, 9, 64, "step", "backstep")
+	leftDFA := loadDFA(spriteSheet, startRow+1, 0, 9, 64, "step", "backstep")
+	downDFA := loadDFA(spriteSheet, startRow+2, 0, 9, 64, "step", "backstep")
+	rightDFA := loadDFA(spriteSheet, startRow+3, 0, 9, 64, "step", "backstep")
+
+	strifeLeftDFA := loadDFA(spriteSheet, startRow+1, 1, 1, 64, "step", "backstep")
+	strifeRightDFA := loadDFA(spriteSheet, startRow+3, 1, 1, 64, "step", "backstep")
 
 	return &WalkingAnimationManager{
 		walkingUpDFA:    upDFA,
@@ -77,18 +82,20 @@ func NewCharacterWalkAnimator(spriteSheet string) *WalkingAnimationManager {
 		walkingDownDFA:  downDFA,
 		walkingRightDFA: rightDFA,
 		curDFA:          rightDFA,
+		strifeLeftDFA:   strifeLeftDFA,
+		strifeRightDFA:  strifeRightDFA,
 	}
 }
 
 func NewStatusBarAnimationManager(heartSpriteSheet string, manaSpriteSheet string, numHearts rune, numMana rune) *StatusBarAnimationManager {
 	heartDFAs := make([]*DFA, 0, numHearts)
 	for i := 0; i < int(numHearts); i++ {
-		heartDFAs = append(heartDFAs, loadDFA(heartSpriteSheet, 0, 5, 32, "reduce", "increase"))
+		heartDFAs = append(heartDFAs, loadDFA(heartSpriteSheet, 0, 0, 5, 32, "reduce", "increase"))
 	}
 
 	manaDFAs := make([]*DFA, 0, numMana)
 	for i := 0; i < int(numMana); i++ {
-		manaDFAs = append(manaDFAs, loadDFA(manaSpriteSheet, 0, 5, 32, "reduce", "increase"))
+		manaDFAs = append(manaDFAs, loadDFA(manaSpriteSheet, 0, 0, 5, 32, "reduce", "increase"))
 	}
 
 	return &StatusBarAnimationManager{
@@ -188,11 +195,11 @@ func (am *WalkingAnimationManager) GetCurrentFrame() *ebiten.Image {
 	return nil
 }
 
-func (am *WalkingAnimationManager) UpdateByDirection(dirX, dirY float64, dt time.Duration) {
+func (am *WalkingAnimationManager) UpdateByDirection(dirX, dirY float64, dt time.Duration, strife bool) {
 	var nextDFA *DFA
 	am.timeInState += dt
 
-	if am.timeInState < 150*time.Millisecond {
+	if am.timeInState < 150*time.Millisecond && !strife {
 		return
 	}
 
@@ -204,18 +211,27 @@ func (am *WalkingAnimationManager) UpdateByDirection(dirX, dirY float64, dt time
 		am.curDFA = nextDFA
 		return
 	} else {
-		// find direction it is most in
-		if math.Abs(dirX) > math.Abs(dirY) {
-			if dirX > 0 {
-				nextDFA = am.walkingRightDFA
+
+		if !strife {
+			// find direction it is most in
+			if math.Abs(dirX) > math.Abs(dirY) {
+				if dirX > 0 {
+					nextDFA = am.walkingRightDFA
+				} else {
+					nextDFA = am.walkingLeftDFA
+				}
 			} else {
-				nextDFA = am.walkingLeftDFA
+				if dirY > 0 {
+					nextDFA = am.walkingDownDFA
+				} else {
+					nextDFA = am.walkingUpDFA
+				}
 			}
 		} else {
-			if dirY > 0 {
-				nextDFA = am.walkingDownDFA
+			if dirX > 0 {
+				nextDFA = am.strifeRightDFA
 			} else {
-				nextDFA = am.walkingUpDFA
+				nextDFA = am.strifeLeftDFA
 			}
 		}
 	}

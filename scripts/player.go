@@ -62,6 +62,14 @@ func (p *Player) Update(dt float32) {
 	// Tick/update
 	now := time.Now()
 
+	// check if blocking (right clicking)
+	blocking := false
+	if ebiten.IsMouseButtonPressed(ebiten.MouseButtonRight) && p.StrifeTime <= 0 {
+		heroAnimationManager.UpdateByDirection(float64(p.AimDirection.X), float64(p.AimDirection.Y), time.Duration(dt*1000)*time.Millisecond, true, "block")
+		blocking = true
+		vel = vel.Mul(0.3) // slow down when blocking
+	}
+
 	// 1) Update current strife state first
 	if p.StrifeTime > 0 {
 		p.StrifeTime -= dt
@@ -85,17 +93,10 @@ func (p *Player) Update(dt float32) {
 
 	// 2) After updating, check if we can start a new strife
 	// Prefer edge-trigger to avoid hold-to-retrigger
-	if ebiten.IsKeyPressed(ebiten.KeySpace) &&
+	if !blocking && ebiten.IsKeyPressed(ebiten.KeySpace) &&
 		now.After(p.LastStrife.Add(p.StrifeCooldown)) &&
 		p.StrifeTime == 0 {
 		p.StrifeTime = p.StrifeDuration
-	}
-
-	cursorDistance := p.Pos.Distance(cursor)
-	slowZone := float32(100.0)
-	// slow down vel as approach cursor
-	if cursorDistance < slowZone {
-		vel = vel.Mul(float32(cursorDistance) / slowZone)
 	}
 
 	if p.Pos.Add(vel).IsInBounds(GameInstance.ScreenWidth, GameInstance.ScreenHeight, int(p.Width/4)) {
@@ -175,11 +176,15 @@ func (p *Player) Update(dt float32) {
 		}
 	}
 
+	if blocking {
+		return
+	}
+
 	moving := p.MoveDirection.Length() > 0
 	if p.StrifeTime > 0 {
-		heroAnimationManager.UpdateByDirection(float64(p.AimDirection.X), float64(p.AimDirection.Y), time.Duration(dt*1000)*time.Millisecond, true, true)
+		heroAnimationManager.UpdateByDirection(float64(p.AimDirection.X), float64(p.AimDirection.Y), time.Duration(dt*1000)*time.Millisecond, true, "strife")
 	} else {
-		heroAnimationManager.UpdateByDirection(float64(p.AimDirection.X), float64(p.AimDirection.Y), time.Duration(dt*1000)*time.Millisecond, false, moving)
+		heroAnimationManager.UpdateByDirection(float64(p.AimDirection.X), float64(p.AimDirection.Y), time.Duration(dt*1000)*time.Millisecond, moving, "")
 	}
 
 	return

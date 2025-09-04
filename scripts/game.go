@@ -323,7 +323,7 @@ func StartGame() {
 	}
 
 	// -- Set up animators --
-	heroAnimationManager = NewCharacterWalkingAnimator(heroImagePath, 8)
+	heroAnimationManager = NewCharacterWalkingAnimator(heroImagePath)
 	statusBarAnimationManager = NewStatusBarAnimationManager("assets/toolbar/health.png", "assets/toolbar/mana.png", player.MaxHealth, player.MaxMana)
 
 	statusBarAnimationManager.DecrementHeart(900, "health")

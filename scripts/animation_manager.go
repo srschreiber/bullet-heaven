@@ -14,15 +14,9 @@ import (
 type AnimationState int
 
 type WalkingAnimationManager struct {
-	walkingLeftDFA  *DFA
-	walkingRightDFA *DFA
-	walkingUpDFA    *DFA
-	walkingDownDFA  *DFA
-	// last dfa for when no input is received, or detecting when just arrived at new dfa (reset to start)
-	curDFA         *DFA
-	timeInState    time.Duration
-	strifeLeftDFA  *DFA
-	strifeRightDFA *DFA
+	curState      *state
+	overrideState *state
+	timeInState   time.Duration
 }
 
 type StatusBarAnimationManager struct {
@@ -36,7 +30,7 @@ type StatusBarAnimationManager struct {
 Load the sprite sheet.
 Assume it is 4x9 in order, and each frame is 8x8 pixels.
 */
-func loadDFA(spritSheetPath string, row int, startCol int, numCols int, width int, nextInput string, previousInput string) *DFA {
+func loadDFA(spritSheetPath string, row int, startCol int, numCols int, width int) *DFA {
 	col := startCol
 	var start *state
 	var prevState *state
@@ -50,8 +44,8 @@ func loadDFA(spritSheetPath string, row int, startCol int, numCols int, width in
 		curState := NewState("frame"+strconv.Itoa(col), frame)
 
 		if prevState != nil {
-			prevState.AddTransition(nextInput, curState)
-			curState.AddTransition(previousInput, prevState)
+			prevState.AddTransition("next", curState)
+			curState.AddTransition("prev", prevState)
 		}
 
 		if start == nil {
@@ -59,6 +53,8 @@ func loadDFA(spritSheetPath string, row int, startCol int, numCols int, width in
 		}
 
 		prevState = curState
+		// connect last state to start for loop (if not done, will be overwritten)
+		curState.AddTransition("next", start)
 		col++
 	}
 	return &DFA{
@@ -67,35 +63,73 @@ func loadDFA(spritSheetPath string, row int, startCol int, numCols int, width in
 	}
 }
 
-func NewCharacterWalkingAnimator(spriteSheet string, startRow int) *WalkingAnimationManager {
-	upDFA := loadDFA(spriteSheet, startRow, 0, 9, 64, "step", "backstep")
-	leftDFA := loadDFA(spriteSheet, startRow+1, 0, 9, 64, "step", "backstep")
-	downDFA := loadDFA(spriteSheet, startRow+2, 0, 9, 64, "step", "backstep")
-	rightDFA := loadDFA(spriteSheet, startRow+3, 0, 9, 64, "step", "backstep")
+func (dfa *DFA) FullyConnectToOther(dfa2 *DFA, input string) {
+	// Allows one dfa to transition to another
+	var start *state = dfa.startState
+	for start != nil {
+		start.AddTransition(input, dfa2.startState)
+		start = start.transitions["next"]
+		if start == dfa.startState {
+			break
+		}
+	}
+}
 
-	strifeLeftDFA := loadDFA(spriteSheet, startRow+1, 1, 1, 64, "step", "backstep")
-	strifeRightDFA := loadDFA(spriteSheet, startRow+3, 1, 1, 64, "step", "backstep")
+func NewCharacterWalkingAnimator(spriteSheet string) *WalkingAnimationManager {
+	upDFA := loadDFA(spriteSheet, 8, 0, 9, 64)
+	leftDFA := loadDFA(spriteSheet, 9, 0, 9, 64)
+	downDFA := loadDFA(spriteSheet, 10, 0, 9, 64)
+	rightDFA := loadDFA(spriteSheet, 11, 0, 9, 64)
+
+	leftDFA.FullyConnectToOther(upDFA, "up")
+	downDFA.FullyConnectToOther(upDFA, "up")
+	rightDFA.FullyConnectToOther(upDFA, "up")
+	upDFA.FullyConnectToOther(leftDFA, "left")
+	downDFA.FullyConnectToOther(leftDFA, "left")
+	rightDFA.FullyConnectToOther(leftDFA, "left")
+	upDFA.FullyConnectToOther(downDFA, "down")
+	leftDFA.FullyConnectToOther(downDFA, "down")
+	rightDFA.FullyConnectToOther(downDFA, "down")
+	upDFA.FullyConnectToOther(rightDFA, "right")
+	leftDFA.FullyConnectToOther(rightDFA, "right")
+	downDFA.FullyConnectToOther(rightDFA, "right")
+
+	strifeLeftDFA := loadDFA(spriteSheet, 9, 1, 1, 64)
+	strifeRightDFA := loadDFA(spriteSheet, 11, 1, 1, 64)
+	strifeUpDFA := loadDFA(spriteSheet, 8, 3, 1, 64)
+	strifeDownDFA := loadDFA(spriteSheet, 10, 3, 1, 64)
+
+	// connect walk left to strife left
+	leftDFA.FullyConnectToOther(strifeLeftDFA, "strife")
+	rightDFA.FullyConnectToOther(strifeRightDFA, "strife")
+	downDFA.FullyConnectToOther(strifeDownDFA, "strife")
+	upDFA.FullyConnectToOther(strifeUpDFA, "strife")
+
+	blockUpDFA := loadDFA(spriteSheet, 4, 4, 1, 64)
+	blockLeftDFA := loadDFA(spriteSheet, 5, 5, 1, 64)
+	blockDownDFA := loadDFA(spriteSheet, 6, 6, 1, 64)
+	blockRightDFA := loadDFA(spriteSheet, 7, 7, 1, 64)
+
+	// connect up walk to up block on "block" input
+	upDFA.FullyConnectToOther(blockUpDFA, "block")
+	leftDFA.FullyConnectToOther(blockLeftDFA, "block")
+	downDFA.FullyConnectToOther(blockDownDFA, "block")
+	rightDFA.FullyConnectToOther(blockRightDFA, "block")
 
 	return &WalkingAnimationManager{
-		walkingUpDFA:    upDFA,
-		walkingLeftDFA:  leftDFA,
-		walkingDownDFA:  downDFA,
-		walkingRightDFA: rightDFA,
-		curDFA:          downDFA,
-		strifeLeftDFA:   strifeLeftDFA,
-		strifeRightDFA:  strifeRightDFA,
+		curState: downDFA.startState,
 	}
 }
 
 func NewStatusBarAnimationManager(heartSpriteSheet string, manaSpriteSheet string, numHearts rune, numMana rune) *StatusBarAnimationManager {
 	heartDFAs := make([]*DFA, 0, numHearts)
 	for i := 0; i < int(numHearts); i++ {
-		heartDFAs = append(heartDFAs, loadDFA(heartSpriteSheet, 0, 0, 5, 32, "reduce", "increase"))
+		heartDFAs = append(heartDFAs, loadDFA(heartSpriteSheet, 0, 0, 5, 32))
 	}
 
 	manaDFAs := make([]*DFA, 0, numMana)
 	for i := 0; i < int(numMana); i++ {
-		manaDFAs = append(manaDFAs, loadDFA(manaSpriteSheet, 0, 0, 5, 32, "reduce", "increase"))
+		manaDFAs = append(manaDFAs, loadDFA(manaSpriteSheet, 0, 0, 5, 32))
 	}
 
 	return &StatusBarAnimationManager{
@@ -135,7 +169,7 @@ func (sbam *StatusBarAnimationManager) HasHearts(t string) bool {
 	for dfaIndex < len(dfas) {
 		dfa := dfas[dfaIndex]
 
-		if dfa.HasNextState("reduce") {
+		if dfa.HasNextState("next") {
 			return true
 		}
 		dfaIndex++
@@ -156,8 +190,8 @@ func (sbam *StatusBarAnimationManager) DecrementHeart(amount int, t string) {
 	for dfaIndex < len(dfas) && amount > 0 {
 		dfa := dfas[dfaIndex]
 
-		if dfa.HasNextState("reduce") {
-			dfa.currentState = dfa.NextState("reduce")
+		if dfa.HasNextState("prev") {
+			dfa.currentState = dfa.NextState("prev")
 			amount--
 		} else {
 			// already depleted
@@ -178,8 +212,8 @@ func (sbam *StatusBarAnimationManager) IncrementHeart(amount int, t string) {
 	for dfaIndex >= 0 && amount > 0 {
 		dfa := dfas[dfaIndex]
 
-		if dfa.HasNextState("increase") {
-			dfa.currentState = dfa.NextState("increase")
+		if dfa.HasNextState("prev") {
+			dfa.currentState = dfa.NextState("prev")
 			amount--
 		} else {
 			// already depleted
@@ -189,50 +223,67 @@ func (sbam *StatusBarAnimationManager) IncrementHeart(amount int, t string) {
 }
 
 func (am *WalkingAnimationManager) GetCurrentFrame() *ebiten.Image {
-	if am.curDFA != nil {
-		return am.curDFA.currentState.stateData.(*ebiten.Image)
+	if am.overrideState != nil {
+		return am.overrideState.stateData.(*ebiten.Image)
+	}
+
+	if am.curState != nil {
+		return am.curState.stateData.(*ebiten.Image)
 	}
 	return nil
 }
 
-func (am *WalkingAnimationManager) UpdateByDirection(dirX, dirY float64, dt time.Duration, strife bool, moving bool) {
-	var nextDFA *DFA
+func (am *WalkingAnimationManager) UpdateByDirection(dirX, dirY float64, dt time.Duration, moving bool, overrideInput string) {
+	var nextState *state
+
+	if len(overrideInput) > 0 {
+		// set override state if exists
+		override := am.curState.transitions[overrideInput]
+		if override != nil {
+			am.overrideState = override
+		}
+	} else {
+		am.overrideState = nil
+	}
+
+	if am.overrideState != nil {
+		am.overrideState = am.overrideState.transitions["next"]
+		return
+	}
+
 	am.timeInState += dt
 
-	if am.timeInState < 150*time.Millisecond && !strife {
+	if am.timeInState < 150*time.Millisecond && len(overrideInput) == 0 {
+		return
+	}
+
+	// not moving = freeze unless override
+	if !moving && len(overrideInput) == 0 {
 		return
 	}
 
 	am.timeInState = 0
 
-	if !strife {
-		// find direction it is most in
-		if math.Abs(dirX) > math.Abs(dirY) {
-			if dirX > 0 {
-				nextDFA = am.walkingRightDFA
-			} else {
-				nextDFA = am.walkingLeftDFA
-			}
+	dirInput := ""
+	// find direction it is most in
+	if math.Abs(dirX) > math.Abs(dirY/2) {
+		if dirX > 0 {
+			dirInput = "right"
 		} else {
-			if dirY > 0 {
-				nextDFA = am.walkingDownDFA
-			} else {
-				nextDFA = am.walkingUpDFA
-			}
+			dirInput = "left"
 		}
 	} else {
-		if dirX > 0 {
-			nextDFA = am.strifeRightDFA
+		if dirY > 0 {
+			dirInput = "down"
 		} else {
-			nextDFA = am.strifeLeftDFA
+			dirInput = "up"
 		}
 	}
 
-	if nextDFA == am.curDFA && moving {
-		am.curDFA.currentState = am.curDFA.NextState("step")
-	} else {
-		am.curDFA = nextDFA
-		// reset to beginning
-		am.curDFA.currentState = am.curDFA.startState
+	nextState = am.curState.transitions[dirInput]
+	if nextState == nil {
+		nextState = am.curState.transitions["next"]
 	}
+
+	am.curState = nextState
 }

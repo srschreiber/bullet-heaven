@@ -35,7 +35,7 @@ func NewSkeletonEnemy(pos *Vec2) *Enemy {
 		Health:          100,
 		RespawnCooldown: 5,
 		RespawnTimer:    0,
-		WalkAnimator:    NewCharacterWalkingAnimator("assets/enemies/skeletonspritesheet.png", 8),
+		WalkAnimator:    NewCharacterWalkingAnimator("assets/enemies/skeletonspritesheet.png"),
 		Name:            "Skeleton",
 		AggroRadius:     500,
 		// so all enemies don't flock to same place
@@ -59,10 +59,10 @@ func (e *Enemy) Update(dt float32, player *Player) {
 
 		vel := moveDirection.Mul(e.Speed * dt)
 		e.Pos = e.Pos.Add(vel)
-		e.WalkAnimator.UpdateByDirection(float64(moveDirection.X), float64(moveDirection.Y), dtMs, false, true)
+		e.WalkAnimator.UpdateByDirection(float64(moveDirection.X), float64(moveDirection.Y), dtMs, true, "")
 	} else if e.Pos.Distance(player.Pos) <= player.Width/2 {
 		// stop moving
-		e.WalkAnimator.UpdateByDirection(0, 0, dtMs, false, false)
+		e.WalkAnimator.UpdateByDirection(0, 0, dtMs, false, "")
 		// Attack
 	}
 }

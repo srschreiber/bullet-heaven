@@ -30,7 +30,7 @@ type StatusBarAnimationManager struct {
 Load the sprite sheet.
 Assume it is 4x9 in order, and each frame is 8x8 pixels.
 */
-func loadDFA(spritSheetPath string, row int, startCol int, numCols int, width int) *DFA {
+func loadDFA(spritSheetPath string, row int, startCol int, numCols int, width int, loop bool) *DFA {
 	col := startCol
 	var start *state
 	var prevState *state
@@ -54,7 +54,11 @@ func loadDFA(spritSheetPath string, row int, startCol int, numCols int, width in
 
 		prevState = curState
 		// connect last state to start for loop (if not done, will be overwritten)
-		curState.AddTransition("next", start)
+		if loop {
+			curState.AddTransition("next", start)
+		} else {
+			curState.AddTransition("next", curState)
+		}
 		col++
 	}
 	return &DFA{
@@ -67,19 +71,20 @@ func (dfa *DFA) FullyConnectToOther(dfa2 *DFA, input string) {
 	// Allows one dfa to transition to another
 	var start *state = dfa.startState
 	for start != nil {
+		prev := start
 		start.AddTransition(input, dfa2.startState)
 		start = start.transitions["next"]
-		if start == dfa.startState {
+		if start == dfa.startState || prev == start {
 			break
 		}
 	}
 }
 
 func NewCharacterWalkingAnimator(spriteSheet string) *WalkingAnimationManager {
-	upDFA := loadDFA(spriteSheet, 8, 0, 9, 64)
-	leftDFA := loadDFA(spriteSheet, 9, 0, 9, 64)
-	downDFA := loadDFA(spriteSheet, 10, 0, 9, 64)
-	rightDFA := loadDFA(spriteSheet, 11, 0, 9, 64)
+	upDFA := loadDFA(spriteSheet, 8, 0, 9, 64, true)
+	leftDFA := loadDFA(spriteSheet, 9, 0, 9, 64, true)
+	downDFA := loadDFA(spriteSheet, 10, 0, 9, 64, true)
+	rightDFA := loadDFA(spriteSheet, 11, 0, 9, 64, true)
 
 	leftDFA.FullyConnectToOther(upDFA, "up")
 	downDFA.FullyConnectToOther(upDFA, "up")
@@ -94,10 +99,10 @@ func NewCharacterWalkingAnimator(spriteSheet string) *WalkingAnimationManager {
 	leftDFA.FullyConnectToOther(rightDFA, "right")
 	downDFA.FullyConnectToOther(rightDFA, "right")
 
-	strifeLeftDFA := loadDFA(spriteSheet, 9, 1, 1, 64)
-	strifeRightDFA := loadDFA(spriteSheet, 11, 1, 1, 64)
-	strifeUpDFA := loadDFA(spriteSheet, 8, 3, 1, 64)
-	strifeDownDFA := loadDFA(spriteSheet, 10, 3, 1, 64)
+	strifeLeftDFA := loadDFA(spriteSheet, 9, 1, 1, 64, false)
+	strifeRightDFA := loadDFA(spriteSheet, 11, 1, 1, 64, false)
+	strifeUpDFA := loadDFA(spriteSheet, 8, 3, 1, 64, false)
+	strifeDownDFA := loadDFA(spriteSheet, 10, 3, 1, 64, false)
 
 	// connect walk left to strife left
 	leftDFA.FullyConnectToOther(strifeLeftDFA, "strife")
@@ -105,10 +110,10 @@ func NewCharacterWalkingAnimator(spriteSheet string) *WalkingAnimationManager {
 	downDFA.FullyConnectToOther(strifeDownDFA, "strife")
 	upDFA.FullyConnectToOther(strifeUpDFA, "strife")
 
-	blockUpDFA := loadDFA(spriteSheet, 4, 4, 1, 64)
-	blockLeftDFA := loadDFA(spriteSheet, 5, 5, 1, 64)
-	blockDownDFA := loadDFA(spriteSheet, 6, 6, 1, 64)
-	blockRightDFA := loadDFA(spriteSheet, 7, 7, 1, 64)
+	blockUpDFA := loadDFA(spriteSheet, 4, 0, 8, 64, false)
+	blockLeftDFA := loadDFA(spriteSheet, 5, 0, 8, 64, false)
+	blockDownDFA := loadDFA(spriteSheet, 6, 0, 8, 64, false)
+	blockRightDFA := loadDFA(spriteSheet, 7, 0, 8, 64, false)
 
 	// connect up walk to up block on "block" input
 	upDFA.FullyConnectToOther(blockUpDFA, "block")
@@ -124,12 +129,12 @@ func NewCharacterWalkingAnimator(spriteSheet string) *WalkingAnimationManager {
 func NewStatusBarAnimationManager(heartSpriteSheet string, manaSpriteSheet string, numHearts rune, numMana rune) *StatusBarAnimationManager {
 	heartDFAs := make([]*DFA, 0, numHearts)
 	for i := 0; i < int(numHearts); i++ {
-		heartDFAs = append(heartDFAs, loadDFA(heartSpriteSheet, 0, 0, 5, 32))
+		heartDFAs = append(heartDFAs, loadDFA(heartSpriteSheet, 0, 0, 5, 32, false))
 	}
 
 	manaDFAs := make([]*DFA, 0, numMana)
 	for i := 0; i < int(numMana); i++ {
-		manaDFAs = append(manaDFAs, loadDFA(manaSpriteSheet, 0, 0, 5, 32))
+		manaDFAs = append(manaDFAs, loadDFA(manaSpriteSheet, 0, 0, 5, 32, false))
 	}
 
 	return &StatusBarAnimationManager{
@@ -235,12 +240,15 @@ func (am *WalkingAnimationManager) GetCurrentFrame() *ebiten.Image {
 
 func (am *WalkingAnimationManager) UpdateByDirection(dirX, dirY float64, dt time.Duration, moving bool, overrideInput string) {
 	var nextState *state
+	am.timeInState += dt
 
 	if len(overrideInput) > 0 {
-		// set override state if exists
-		override := am.curState.transitions[overrideInput]
-		if override != nil {
-			am.overrideState = override
+		// Init override if not already set
+		if am.overrideState == nil {
+			override := am.curState.transitions[overrideInput]
+			if override != nil {
+				am.overrideState = override
+			}
 		}
 	} else {
 		am.overrideState = nil
@@ -251,14 +259,7 @@ func (am *WalkingAnimationManager) UpdateByDirection(dirX, dirY float64, dt time
 		return
 	}
 
-	am.timeInState += dt
-
 	if am.timeInState < 150*time.Millisecond && len(overrideInput) == 0 {
-		return
-	}
-
-	// not moving = freeze unless override
-	if !moving && len(overrideInput) == 0 {
 		return
 	}
 
@@ -282,6 +283,10 @@ func (am *WalkingAnimationManager) UpdateByDirection(dirX, dirY float64, dt time
 
 	nextState = am.curState.transitions[dirInput]
 	if nextState == nil {
+		// nil means within same dfa
+		if !moving {
+			return
+		}
 		nextState = am.curState.transitions["next"]
 	}
 

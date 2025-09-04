@@ -70,11 +70,18 @@ func (p *Player) Update(dt float32) {
 	}
 
 	half := 16
-	if p.Pos.Add(vel).IsInBounds(GameInstance.ScreenHeight, GameInstance.ScreenWidth, half) {
+	cursorDistance := p.Pos.Distance(cursor)
+	slowZone := float32(100.0)
+	// slow down vel as approach cursor
+	if cursorDistance < slowZone {
+		vel = vel.Mul(float32(cursorDistance) / slowZone)
+	}
+
+	if p.Pos.Add(vel).IsInBounds(GameInstance.ScreenWidth, GameInstance.ScreenHeight, half) {
 		p.Pos = p.Pos.Add(vel)
-	} else if p.Pos.Add(&Vec2{X: vel.X}).IsInBounds(GameInstance.ScreenHeight, GameInstance.ScreenWidth, half) {
+	} else if p.Pos.Add(&Vec2{X: vel.X}).IsInBounds(GameInstance.ScreenWidth, GameInstance.ScreenHeight, half) {
 		p.Pos = p.Pos.Add(&Vec2{X: vel.X})
-	} else if p.Pos.Add(&Vec2{Y: vel.Y}).IsInBounds(GameInstance.ScreenHeight, GameInstance.ScreenWidth, half) {
+	} else if p.Pos.Add(&Vec2{Y: vel.Y}).IsInBounds(GameInstance.ScreenWidth, GameInstance.ScreenHeight, half) {
 		p.Pos = p.Pos.Add(&Vec2{Y: vel.Y})
 	}
 
@@ -95,20 +102,21 @@ func (p *Player) Update(dt float32) {
 			w.ParticleEmitter.EmitDirectional(p.Pos, p.Dir, 2, p.Speed)
 
 			// keep if on-screen
-			if p.Pos.IsInBounds(GameInstance.ScreenHeight, GameInstance.ScreenWidth, 0) {
+			if p.Pos.IsInBounds(GameInstance.ScreenWidth, GameInstance.ScreenHeight, 0) && p.Gas > 0 {
 				newProjectiles = append(newProjectiles, *p)
 			}
-
+			p.Gas -= dt * p.Speed
 		}
 		w.Projectiles = newProjectiles
 
 		// fire when cooldown elapses if holding mouse button
 		hasMana := statusBarAnimationManager.HasHearts("mana")
+
 		if hasMana && w.TimeSinceFire >= w.CooldownSec && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			w.TimeSinceFire = 0 + (rand.Float32()*2-1)*0.1*w.CooldownSec // add some randomness to rate of fire
 			shot = true
 			newProj := *w.ProjectileInstance
-			newProj.Pos = p.Pos
+			newProj.Pos = p.Pos.Add(p.Direction.Mul(32))
 
 			newProj.Dir = p.Direction.Norm()
 			// get last direction
@@ -135,10 +143,22 @@ func (p *Player) Update(dt float32) {
 		statusBarAnimationManager.DecrementHeart(1, "mana")
 	}
 
-	p.ManaRegenCooldown -= time.Duration(dt*1000) * time.Millisecond
-	if p.ManaRegenCooldown <= 0 {
-		p.ManaRegenCooldown = time.Duration(1000/p.ManaRegenRate) * time.Millisecond
-		statusBarAnimationManager.IncrementHeart(1, "mana")
+	// check if weapon is still in cooldown. If so, can't recover mana
+	inWeaponCooldown := false
+	for i := range p.Weapons {
+		w := &p.Weapons[i]
+		if w.TimeSinceFire < w.CooldownSec {
+			inWeaponCooldown = true
+		}
+	}
+
+	if !inWeaponCooldown && !shot {
+		// If mouse isnt down, can regen
+		p.ManaRegenCooldown -= time.Duration(dt*1000) * time.Millisecond
+		if p.ManaRegenCooldown <= 0 {
+			p.ManaRegenCooldown = time.Duration(1000/p.ManaRegenRate) * time.Millisecond
+			statusBarAnimationManager.IncrementHeart(1, "mana")
+		}
 	}
 
 	heroAnimationManager.UpdateByDirection(float64(p.Direction.X), float64(p.Direction.Y), time.Duration(dt*1000)*time.Millisecond)

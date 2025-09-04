@@ -7,6 +7,8 @@ type Projectile struct {
 	Dir    *model.Vec2 // unit direction
 	Speed  float32
 	Radius float32
+	Gas    float32 // how far can it has left to travel
+
 }
 
 type Weapon struct {

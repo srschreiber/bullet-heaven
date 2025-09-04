@@ -228,12 +228,14 @@ func StartGame() {
 	ebiten.SetWindowTitle("Smoke Particles Demo")
 	ebiten.SetTPS(int(TargetTPS))
 
-	defaultCooldown := float32(2)
+	defaultCooldown := float32(.5)
+	defaultGas := float32(150)
 	earthProjectile := Projectile{
 		Pos:    Vec2Zero,
 		Dir:    Vec2Zero,
 		Speed:  160, // px/sec
 		Radius: 5,
+		Gas:    defaultGas, // how far can it has left to travel
 	}
 
 	earthWeapon := Weapon{
@@ -248,8 +250,9 @@ func StartGame() {
 	fireProjectile := Projectile{
 		Pos:    Vec2Zero,
 		Dir:    Vec2Zero,
-		Speed:  160, // px/sec
+		Speed:  200, // px/sec
 		Radius: 5,
+		Gas:    defaultGas, // how far can it has left to travel
 	}
 
 	fireWeapon := Weapon{
@@ -257,8 +260,8 @@ func StartGame() {
 		Projectiles:        []Projectile{},
 		ProjectileInstance: &fireProjectile,
 		LastDir:            &Vec2{0.5, 0.5},
-		ParticleEmitter:    NewSmokeEmitter(fireImage, 20000, .1, 5),
-		TimeSinceFire:      rand.Float32() * defaultCooldown, // stagger fire times
+		ParticleEmitter:    NewSmokeEmitter(fireImage, 20000, .1, .5),
+		TimeSinceFire:      defaultCooldown, // stagger fire times
 	}
 
 	smokeProjectile := Projectile{
@@ -266,6 +269,7 @@ func StartGame() {
 		Dir:    Vec2Zero,
 		Speed:  160, // px/sec
 		Radius: 5,
+		Gas:    defaultGas,
 	}
 
 	smokeWeapon := Weapon{
@@ -286,14 +290,14 @@ func StartGame() {
 		Weapons:           []Weapon{fireWeapon},
 		MaxHealth:         5,
 		Health:            5,
-		MaxMana:           2,
-		Mana:              2,
-		ManaRegenRate:     .2, // mana per second
+		MaxMana:           8,
+		Mana:              8,
+		ManaRegenRate:     1.5, // mana per second
 		ManaRegenCooldown: 0,
-		StrifeDuration:    1.5,             // length
-		StrifeCooldown:    time.Second * 1, // cooldown
-		StrifeMultiplier:  2.5,             // speed multiplier
-		StrifeDecay:       2,               // decay rate
+		StrifeDuration:    .5,                     // length
+		StrifeCooldown:    time.Millisecond * 250, // cooldown
+		StrifeMultiplier:  3,                      // speed multiplier
+		StrifeDecay:       2,                      // decay rate
 		LastStrife:        time.Now(),
 		StrifeTime:        0, // current time left in strife
 

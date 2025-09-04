@@ -26,10 +26,6 @@ type StatusBarAnimationManager struct {
 	manaStates []*state
 }
 
-/*
-Load the sprite sheet.
-Assume it is 4x9 in order, and each frame is 8x8 pixels.
-*/
 func loadDFA(spritSheetPath string, row int, startCol int, numCols int, width int, loop bool) *state {
 	col := startCol
 	var start *state
@@ -44,8 +40,8 @@ func loadDFA(spritSheetPath string, row int, startCol int, numCols int, width in
 		curState := NewState("frame"+strconv.Itoa(col), frame)
 
 		if prevState != nil {
-			prevState.AddTransition("next", curState)
-			curState.AddTransition("prev", prevState)
+			prevState.AddNext(curState)
+			curState.AddPrev(prevState)
 		}
 
 		if start == nil {
@@ -55,13 +51,13 @@ func loadDFA(spritSheetPath string, row int, startCol int, numCols int, width in
 		prevState = curState
 		// connect last state to start for loop (if not done, will be overwritten)
 		if loop {
-			curState.AddTransition("next", start)
+			curState.AddNext(start)
 		} else {
-			curState.AddTransition("next", curState)
+			curState.AddNext(curState) // stay on last frame
 		}
 		col++
 	}
-	start.AddTransition("prev", start)
+	start.AddPrev(start)
 
 	return start
 }
@@ -72,7 +68,7 @@ func (s *state) FullyConnectToOther(state2 *state, input string) {
 	for it != nil {
 		prev := it
 		it.AddTransition(input, state2)
-		it = it.transitions["next"]
+		it = it.Next()
 		if it == s || prev == it {
 			break
 		}
@@ -173,7 +169,7 @@ func (sbam *StatusBarAnimationManager) HasHearts(t string) bool {
 	for statesIndex < len(states) {
 		state := states[statesIndex]
 
-		if state.transitions["next"] != state {
+		if state.Next() != state {
 			return true
 		}
 		statesIndex++
@@ -194,8 +190,8 @@ func (sbam *StatusBarAnimationManager) DecrementHeart(amount int, t string) {
 	for stateIndex < len(states) && amount > 0 {
 		state := states[stateIndex]
 
-		if state.transitions["next"] != state {
-			states[stateIndex] = state.transitions["next"]
+		if state.Next() != state {
+			states[stateIndex] = state.Next()
 			amount--
 		} else {
 			// already depleted
@@ -216,8 +212,8 @@ func (sbam *StatusBarAnimationManager) IncrementHeart(amount int, t string) {
 	for stateIndex >= 0 && amount > 0 {
 		state := states[stateIndex]
 
-		if state.transitions["prev"] != state {
-			states[stateIndex] = state.transitions["prev"]
+		if state.Prev() != state {
+			states[stateIndex] = state.Prev()
 			amount--
 		} else {
 			// already depleted
@@ -244,7 +240,7 @@ func (am *WalkingAnimationManager) UpdateByDirection(dirX, dirY float64, dt time
 	if len(overrideInput) > 0 {
 		// Init override if not already set
 		if am.overrideState == nil {
-			override := am.curState.transitions[overrideInput]
+			override := am.curState.SendInput(overrideInput)
 			if override != nil {
 				am.overrideState = override
 			}
@@ -254,7 +250,7 @@ func (am *WalkingAnimationManager) UpdateByDirection(dirX, dirY float64, dt time
 	}
 
 	if am.overrideState != nil {
-		am.overrideState = am.overrideState.transitions["next"]
+		am.overrideState = am.overrideState.Next()
 		return
 	}
 
@@ -280,13 +276,13 @@ func (am *WalkingAnimationManager) UpdateByDirection(dirX, dirY float64, dt time
 		}
 	}
 
-	nextState = am.curState.transitions[dirInput]
+	nextState = am.curState.SendInput(dirInput)
 	if nextState == nil {
 		// nil means within same dfa
 		if !moving {
 			return
 		}
-		nextState = am.curState.transitions["next"]
+		nextState = am.curState.Next()
 	}
 
 	am.curState = nextState

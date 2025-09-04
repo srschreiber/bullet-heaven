@@ -81,7 +81,7 @@ func NewCharacterWalkingAnimator(spriteSheet string, startRow int) *WalkingAnima
 		walkingLeftDFA:  leftDFA,
 		walkingDownDFA:  downDFA,
 		walkingRightDFA: rightDFA,
-		curDFA:          rightDFA,
+		curDFA:          downDFA,
 		strifeLeftDFA:   strifeLeftDFA,
 		strifeRightDFA:  strifeRightDFA,
 	}
@@ -195,7 +195,7 @@ func (am *WalkingAnimationManager) GetCurrentFrame() *ebiten.Image {
 	return nil
 }
 
-func (am *WalkingAnimationManager) UpdateByDirection(dirX, dirY float64, dt time.Duration, strife bool) {
+func (am *WalkingAnimationManager) UpdateByDirection(dirX, dirY float64, dt time.Duration, strife bool, moving bool) {
 	var nextDFA *DFA
 	am.timeInState += dt
 
@@ -205,38 +205,30 @@ func (am *WalkingAnimationManager) UpdateByDirection(dirX, dirY float64, dt time
 
 	am.timeInState = 0
 
-	if dirX == 0 && dirY == 0 {
-		// If no direction is given, reset to idle animation
-		nextDFA = am.walkingDownDFA
-		am.curDFA = nextDFA
-		return
-	} else {
-
-		if !strife {
-			// find direction it is most in
-			if math.Abs(dirX) > math.Abs(dirY) {
-				if dirX > 0 {
-					nextDFA = am.walkingRightDFA
-				} else {
-					nextDFA = am.walkingLeftDFA
-				}
+	if !strife {
+		// find direction it is most in
+		if math.Abs(dirX) > math.Abs(dirY) {
+			if dirX > 0 {
+				nextDFA = am.walkingRightDFA
 			} else {
-				if dirY > 0 {
-					nextDFA = am.walkingDownDFA
-				} else {
-					nextDFA = am.walkingUpDFA
-				}
+				nextDFA = am.walkingLeftDFA
 			}
 		} else {
-			if dirX > 0 {
-				nextDFA = am.strifeRightDFA
+			if dirY > 0 {
+				nextDFA = am.walkingDownDFA
 			} else {
-				nextDFA = am.strifeLeftDFA
+				nextDFA = am.walkingUpDFA
 			}
+		}
+	} else {
+		if dirX > 0 {
+			nextDFA = am.strifeRightDFA
+		} else {
+			nextDFA = am.strifeLeftDFA
 		}
 	}
 
-	if nextDFA == am.curDFA {
+	if nextDFA == am.curDFA && moving {
 		am.curDFA.currentState = am.curDFA.NextState("step")
 	} else {
 		am.curDFA = nextDFA

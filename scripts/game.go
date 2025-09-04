@@ -116,6 +116,9 @@ var GameInstance *Game
 func (g *Game) Update() error {
 	dt := float32(1.0 / TargetTPS)
 	g.Player.Update(dt)
+	for _, enemy := range AllEnemies {
+		enemy.Update(dt, &g.Player)
+	}
 	return nil
 }
 
@@ -134,19 +137,34 @@ func (g *Game) drawScene(dst *ebiten.Image) {
 		}
 	}
 
+	// render all enemies
+	for _, enemy := range AllEnemies {
+		op := &ebiten.DrawImageOptions{}
+		enemyWidth := float64(enemy.Width)
+		op.GeoM.Translate(-enemyWidth/2, -enemyWidth/2)
+		op.GeoM.Translate(float64(enemy.Pos.X), float64(enemy.Pos.Y))
+		// now move to center
+		dst.DrawImage(enemy.WalkAnimator.GetCurrentFrame(), op)
+		// draw a little dot to denote enemy position
+		ebitenutil.DrawRect(dst, float64(enemy.Pos.X)-2, float64(enemy.Pos.Y)-2, 4, 4, color.RGBA{255, 0, 0, 255})
+	}
+
 	// player (16x16 square)
 	const w = 16.0
 
 	frame := heroAnimationManager.GetCurrentFrame()
 	op := &ebiten.DrawImageOptions{}
 	// figure out how to scale it to 64
-	tgtWidth := float64(64)
+	tgtWidth := float64(g.Player.Width)
 	l := frame.Bounds().Dx()
 	s := float64(tgtWidth) / float64(l)
 	op.GeoM.Scale(s, s)
 	op.GeoM.Translate(-tgtWidth/2, -tgtWidth/2)
 	op.GeoM.Translate(float64(g.Player.Pos.X), float64(g.Player.Pos.Y))
 	dst.DrawImage(frame, op)
+	// draw a little dot to denote player position
+	ebitenutil.DrawRect(dst, float64(g.Player.Pos.X)-2, float64(g.Player.Pos.Y)-2, 4, 4, color.RGBA{0, 255, 0, 255})
+
 	// particles
 	for _, w := range g.Player.Weapons {
 		w.ParticleEmitter.Draw(dst)
@@ -285,7 +303,8 @@ func StartGame() {
 
 	player := Player{
 		Pos:               &Vec2{X: 100, Y: 100},
-		Direction:         Vec2Zero,
+		MoveDirection:     Vec2Zero,
+		AimDirection:      Vec2Zero,
 		Speed:             80, // px/sec
 		Weapons:           []Weapon{fireWeapon},
 		MaxHealth:         5,
@@ -300,7 +319,7 @@ func StartGame() {
 		StrifeDecay:       2,                      // decay rate
 		LastStrife:        time.Now(),
 		StrifeTime:        0, // current time left in strife
-
+		Width:             64,
 	}
 
 	// -- Set up animators --
@@ -309,6 +328,13 @@ func StartGame() {
 
 	statusBarAnimationManager.DecrementHeart(900, "health")
 	statusBarAnimationManager.IncrementHeart(10, "health")
+
+	// render a couple skeletons randomly on screen
+	for i := 0; i < 5; i++ {
+		x := float32(rand.Intn(logicalW))
+		y := float32(rand.Intn(logicalH))
+		NewSkeletonEnemy(&Vec2{X: x, Y: y})
+	}
 
 	game := &Game{
 		ScreenWidth:  logicalW,

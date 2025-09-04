@@ -21,16 +21,16 @@ type WalkingAnimationManager struct {
 
 type StatusBarAnimationManager struct {
 	// number of hearts
-	heartDFAs []*DFA
+	heartStates []*state
 	// number of mana
-	manaDFAs []*DFA
+	manaStates []*state
 }
 
 /*
 Load the sprite sheet.
 Assume it is 4x9 in order, and each frame is 8x8 pixels.
 */
-func loadDFA(spritSheetPath string, row int, startCol int, numCols int, width int, loop bool) *DFA {
+func loadDFA(spritSheetPath string, row int, startCol int, numCols int, width int, loop bool) *state {
 	col := startCol
 	var start *state
 	var prevState *state
@@ -61,20 +61,19 @@ func loadDFA(spritSheetPath string, row int, startCol int, numCols int, width in
 		}
 		col++
 	}
-	return &DFA{
-		startState:   start,
-		currentState: start,
-	}
+	start.AddTransition("prev", start)
+
+	return start
 }
 
-func (dfa *DFA) FullyConnectToOther(dfa2 *DFA, input string) {
+func (s *state) FullyConnectToOther(state2 *state, input string) {
 	// Allows one dfa to transition to another
-	var start *state = dfa.startState
-	for start != nil {
-		prev := start
-		start.AddTransition(input, dfa2.startState)
-		start = start.transitions["next"]
-		if start == dfa.startState || prev == start {
+	var it *state = s
+	for it != nil {
+		prev := it
+		it.AddTransition(input, state2)
+		it = it.transitions["next"]
+		if it == s || prev == it {
 			break
 		}
 	}
@@ -122,107 +121,107 @@ func NewCharacterWalkingAnimator(spriteSheet string) *WalkingAnimationManager {
 	rightDFA.FullyConnectToOther(blockRightDFA, "block")
 
 	return &WalkingAnimationManager{
-		curState: downDFA.startState,
+		curState: downDFA,
 	}
 }
 
 func NewStatusBarAnimationManager(heartSpriteSheet string, manaSpriteSheet string, numHearts rune, numMana rune) *StatusBarAnimationManager {
-	heartDFAs := make([]*DFA, 0, numHearts)
+	heartStates := make([]*state, 0, numHearts)
 	for i := 0; i < int(numHearts); i++ {
-		heartDFAs = append(heartDFAs, loadDFA(heartSpriteSheet, 0, 0, 5, 32, false))
+		heartStates = append(heartStates, loadDFA(heartSpriteSheet, 0, 0, 5, 32, false))
 	}
 
-	manaDFAs := make([]*DFA, 0, numMana)
+	manaStates := make([]*state, 0, numMana)
 	for i := 0; i < int(numMana); i++ {
-		manaDFAs = append(manaDFAs, loadDFA(manaSpriteSheet, 0, 0, 5, 32, false))
+		manaStates = append(manaStates, loadDFA(manaSpriteSheet, 0, 0, 5, 32, false))
 	}
 
 	return &StatusBarAnimationManager{
-		heartDFAs: heartDFAs,
-		manaDFAs:  manaDFAs,
+		heartStates: heartStates,
+		manaStates:  manaStates,
 	}
 }
 
 func (sbam *StatusBarAnimationManager) GetHeartFrames() []*ebiten.Image {
-	frames := make([]*ebiten.Image, 0, len(sbam.heartDFAs))
-	for _, dfa := range sbam.heartDFAs {
-		frames = append(frames, dfa.currentState.stateData.(*ebiten.Image))
+	frames := make([]*ebiten.Image, 0, len(sbam.heartStates))
+	for _, state := range sbam.heartStates {
+		frames = append(frames, state.stateData.(*ebiten.Image))
 	}
 	return frames
 }
 
 func (sbam *StatusBarAnimationManager) GetManaFrames() []*ebiten.Image {
-	frames := make([]*ebiten.Image, 0, len(sbam.manaDFAs))
-	for _, dfa := range sbam.manaDFAs {
-		frames = append(frames, dfa.currentState.stateData.(*ebiten.Image))
+	frames := make([]*ebiten.Image, 0, len(sbam.manaStates))
+	for _, state := range sbam.manaStates {
+		frames = append(frames, state.stateData.(*ebiten.Image))
 	}
 	return frames
 }
 
 func (sbam *StatusBarAnimationManager) HasHearts(t string) bool {
-	dfaIndex := 0
-	var dfas []*DFA
+	statesIndex := 0
+	var states []*state
 
 	if t == "health" {
-		dfas = sbam.heartDFAs
+		states = sbam.heartStates
 	}
 
 	if t == "mana" {
-		dfas = sbam.manaDFAs
+		states = sbam.manaStates
 	}
 
-	for dfaIndex < len(dfas) {
-		dfa := dfas[dfaIndex]
+	for statesIndex < len(states) {
+		state := states[statesIndex]
 
-		if dfa.HasNextState("next") {
+		if state.transitions["next"] != state {
 			return true
 		}
-		dfaIndex++
+		statesIndex++
 	}
 	return false
 }
 
 func (sbam *StatusBarAnimationManager) DecrementHeart(amount int, t string) {
-	dfaIndex := 0
-	var dfas []*DFA
+	stateIndex := 0
+	var states []*state
 
 	if t == "health" {
-		dfas = sbam.heartDFAs
+		states = sbam.heartStates
 	} else if t == "mana" {
-		dfas = sbam.manaDFAs
+		states = sbam.manaStates
 	}
 
-	for dfaIndex < len(dfas) && amount > 0 {
-		dfa := dfas[dfaIndex]
+	for stateIndex < len(states) && amount > 0 {
+		state := states[stateIndex]
 
-		if dfa.HasNextState("prev") {
-			dfa.currentState = dfa.NextState("prev")
+		if state.transitions["next"] != state {
+			states[stateIndex] = state.transitions["next"]
 			amount--
 		} else {
 			// already depleted
-			dfaIndex++
+			stateIndex++
 		}
 	}
 }
 
 func (sbam *StatusBarAnimationManager) IncrementHeart(amount int, t string) {
-	var dfas []*DFA
+	var states []*state
 
 	if t == "health" {
-		dfas = sbam.heartDFAs
+		states = sbam.heartStates
 	} else if t == "mana" {
-		dfas = sbam.manaDFAs
+		states = sbam.manaStates
 	}
-	dfaIndex := len(dfas) - 1
-	for dfaIndex >= 0 && amount > 0 {
-		dfa := dfas[dfaIndex]
+	stateIndex := len(states) - 1
+	for stateIndex >= 0 && amount > 0 {
+		state := states[stateIndex]
 
-		if dfa.HasNextState("prev") {
-			dfa.currentState = dfa.NextState("prev")
+		if state.transitions["prev"] != state {
+			states[stateIndex] = state.transitions["prev"]
 			amount--
 		} else {
 			// already depleted
-			dfaIndex--
+			stateIndex--
 		}
 	}
 }

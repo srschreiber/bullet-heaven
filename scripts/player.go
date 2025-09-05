@@ -8,24 +8,25 @@ import (
 )
 
 type Player struct {
-	Pos               *Vec2
-	MoveDirection     *Vec2
-	AimDirection      *Vec2
-	Speed             float32 // pixels per second
-	Weapons           []Weapon
-	MaxHealth         rune
-	Health            rune
-	MaxMana           rune
-	Mana              rune
-	ManaRegenRate     float32 // mana per second
-	ManaRegenCooldown time.Duration
-	StrifeDuration    float32 // length
-	StrifeTime        float32
-	LastStrife        time.Time
-	StrifeCooldown    time.Duration
-	StrifeMultiplier  float32
-	StrifeDecay       float32 // loss of speed
-	Width             float32
+	Pos                  *Vec2
+	MoveDirection        *Vec2
+	AimDirection         *Vec2
+	Speed                float32 // pixels per second
+	Weapons              []Weapon
+	MaxHealth            rune
+	MaxMana              rune
+	MaxStamina           rune
+	ManaRegenRate        float32 // mana per second
+	ManaRegenCooldown    time.Duration
+	StaminaRegenRate     float32 // stamina per second
+	StaminaRegenCooldown time.Duration
+	StrifeDuration       float32 // length
+	StrifeTime           float32
+	LastStrife           time.Time
+	StrifeCooldown       time.Duration
+	StrifeMultiplier     float32
+	StrifeDecay          float32 // loss of speed
+	Width                float32
 }
 
 func (p *Player) Update(dt float32) {
@@ -91,12 +92,15 @@ func (p *Player) Update(dt float32) {
 		p.StrifeTime = 0 // clamp (in case it went negative)
 	}
 
+	hasStamina := statusBarAnimationManager.HasHearts(StaminaStatus)
 	// 2) After updating, check if we can start a new strife
 	// Prefer edge-trigger to avoid hold-to-retrigger
-	if !blocking && ebiten.IsKeyPressed(ebiten.KeySpace) &&
+	if hasStamina && !blocking && ebiten.IsKeyPressed(ebiten.KeySpace) &&
 		now.After(p.LastStrife.Add(p.StrifeCooldown)) &&
 		p.StrifeTime == 0 {
 		p.StrifeTime = p.StrifeDuration
+		// consume stamina
+		statusBarAnimationManager.DecrementHeart(1, StaminaStatus)
 	}
 
 	if p.Pos.Add(vel).IsInBounds(GameInstance.ScreenWidth, GameInstance.ScreenHeight, int(p.Width/4)) {
@@ -132,7 +136,7 @@ func (p *Player) Update(dt float32) {
 		w.Projectiles = newProjectiles
 
 		// fire when cooldown elapses if holding mouse button
-		hasMana := statusBarAnimationManager.HasHearts("mana")
+		hasMana := statusBarAnimationManager.HasHearts(ManaStatus)
 
 		if hasMana && w.TimeSinceFire >= w.CooldownSec && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			w.TimeSinceFire = 0 + (rand.Float32()*2-1)*0.1*w.CooldownSec // add some randomness to rate of fire
@@ -155,7 +159,7 @@ func (p *Player) Update(dt float32) {
 	}
 
 	if shot {
-		statusBarAnimationManager.DecrementHeart(1, "mana")
+		statusBarAnimationManager.DecrementHeart(1, ManaStatus)
 	}
 
 	// check if weapon is still in cooldown. If so, can't recover mana
@@ -172,12 +176,21 @@ func (p *Player) Update(dt float32) {
 		p.ManaRegenCooldown -= time.Duration(dt*1000) * time.Millisecond
 		if p.ManaRegenCooldown <= 0 {
 			p.ManaRegenCooldown = time.Duration(1000/p.ManaRegenRate) * time.Millisecond
-			statusBarAnimationManager.IncrementHeart(1, "mana")
+			statusBarAnimationManager.IncrementHeart(1, ManaStatus)
 		}
 	}
 
 	if blocking {
 		return
+	}
+
+	// Not strifing or holding strife button
+	if p.StrifeTime == 0 && !ebiten.IsKeyPressed(ebiten.KeySpace) {
+		p.StaminaRegenCooldown -= time.Duration(dt*1000) * time.Millisecond
+		if p.StaminaRegenCooldown <= 0 {
+			p.StaminaRegenCooldown = time.Duration(1000/p.StaminaRegenRate) * time.Millisecond
+			statusBarAnimationManager.IncrementHeart(1, StaminaStatus)
+		}
 	}
 
 	moving := p.MoveDirection.Length() > 0

@@ -170,15 +170,27 @@ func (g *Game) drawScene(dst *ebiten.Image) {
 		w.ParticleEmitter.Draw(dst)
 	}
 
-	for i, frame := range statusBarAnimationManager.GetHeartFrames() {
+	toolbarRowSpacing := float64(32)
+	heartSpacing := 35
+	healthYOffset := float64(g.ScreenHeight) - 32 - 3*toolbarRowSpacing
+	manaYOffset := float64(g.ScreenHeight) - 32 - 1*toolbarRowSpacing
+	staminaYOffset := float64(g.ScreenHeight) - 32 - 2*toolbarRowSpacing
+
+	for i, frame := range statusBarAnimationManager.GetStatusFrames(HealthStatus) {
 		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Translate(5+float64(i*35), float64(g.ScreenHeight)-32-64)
+		op.GeoM.Translate(5+float64(i*heartSpacing), healthYOffset)
 		dst.DrawImage(frame, op)
 	}
 
-	for i, frame := range statusBarAnimationManager.GetManaFrames() {
+	for i, frame := range statusBarAnimationManager.GetStatusFrames(ManaStatus) {
 		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Translate(5+float64(i*35), float64(g.ScreenHeight)-32-16)
+		op.GeoM.Translate(5+float64(i*heartSpacing), manaYOffset)
+		dst.DrawImage(frame, op)
+	}
+
+	for i, frame := range statusBarAnimationManager.GetStatusFrames(StaminaStatus) {
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Translate(5+float64(i*heartSpacing), staminaYOffset)
 		dst.DrawImage(frame, op)
 	}
 }
@@ -302,32 +314,33 @@ func StartGame() {
 	_, _ = smokeWeapon, earthWeapon // silence unused
 
 	player := Player{
-		Pos:               &Vec2{X: 100, Y: 100},
-		MoveDirection:     Vec2Zero,
-		AimDirection:      Vec2Zero,
-		Speed:             80, // px/sec
-		Weapons:           []Weapon{fireWeapon},
-		MaxHealth:         5,
-		Health:            5,
-		MaxMana:           8,
-		Mana:              8,
-		ManaRegenRate:     1.5, // mana per second
-		ManaRegenCooldown: 0,
-		StrifeDuration:    .5,                     // length
-		StrifeCooldown:    time.Millisecond * 250, // cooldown
-		StrifeMultiplier:  3,                      // speed multiplier
-		StrifeDecay:       2,                      // decay rate
-		LastStrife:        time.Now(),
-		StrifeTime:        0, // current time left in strife
-		Width:             64,
+		Pos:                  &Vec2{X: 100, Y: 100},
+		MoveDirection:        Vec2Zero,
+		AimDirection:         Vec2Zero,
+		Speed:                70, // px/sec
+		Weapons:              []Weapon{fireWeapon},
+		MaxHealth:            3,
+		MaxMana:              3,
+		MaxStamina:           2,
+		ManaRegenRate:        1, // mana per second
+		ManaRegenCooldown:    0,
+		StaminaRegenRate:     .5,
+		StaminaRegenCooldown: 0,
+		StrifeDuration:       .5,                     // length
+		StrifeCooldown:       time.Millisecond * 250, // cooldown
+		StrifeMultiplier:     2.5,                    // speed multiplier
+		StrifeDecay:          2,                      // decay rate
+		LastStrife:           time.Now(),
+		StrifeTime:           0, // current time left in strife
+		Width:                64,
 	}
 
 	// -- Set up animators --
 	heroAnimationManager = NewCharacterWalkingAnimator(heroImagePath)
-	statusBarAnimationManager = NewStatusBarAnimationManager("assets/toolbar/health.png", "assets/toolbar/mana.png", player.MaxHealth, player.MaxMana)
+	statusBarAnimationManager = NewStatusBarAnimationManager("assets/toolbar/health.png", "assets/toolbar/mana.png", "assets/toolbar/stamina.png", player.MaxHealth, player.MaxMana, player.MaxStamina)
 
-	statusBarAnimationManager.DecrementHeart(900, "health")
-	statusBarAnimationManager.IncrementHeart(10, "health")
+	statusBarAnimationManager.DecrementHeart(900, HealthStatus)
+	statusBarAnimationManager.IncrementHeart(3, HealthStatus)
 
 	// render a couple skeletons randomly on screen
 	for i := 0; i < 5; i++ {

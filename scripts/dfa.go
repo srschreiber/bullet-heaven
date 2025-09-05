@@ -48,3 +48,16 @@ func (s *state) Next() *state {
 func (s *state) Prev() *state {
 	return s.SendInput("prev")
 }
+
+func (s *state) FullyConnectToOther(state2 *state, input string) {
+	// Allows one dfa to transition to another
+	var it *state = s
+	for it != nil {
+		prev := it
+		it.AddTransition(input, state2)
+		it = it.Next()
+		if it == s || prev == it {
+			break
+		}
+	}
+}

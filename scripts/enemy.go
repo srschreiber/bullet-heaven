@@ -62,7 +62,7 @@ func (e *Enemy) Update(dt float32, player *Player) {
 		e.WalkAnimator.UpdateByDirection(float64(moveDirection.X), float64(moveDirection.Y), dtMs, true, "")
 	} else if e.Pos.Distance(player.Pos) <= player.Width/2 {
 		// stop moving
-		e.WalkAnimator.UpdateByDirection(0, 0, dtMs, false, "")
-		// Attack
+		//e.WalkAnimator.UpdateByDirection(0, 0, dtMs, false, "")
+		// Attack Animation: TODO!
 	}
 }

@@ -318,7 +318,7 @@ func StartGame() {
 		MoveDirection:        Vec2Zero,
 		AimDirection:         Vec2Zero,
 		Speed:                70, // px/sec
-		Weapons:              []Weapon{fireWeapon},
+		Weapons:              []Weapon{fireWeapon, smokeWeapon},
 		MaxHealth:            3,
 		MaxMana:              3,
 		MaxStamina:           2,

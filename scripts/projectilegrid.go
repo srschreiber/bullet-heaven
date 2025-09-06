@@ -5,6 +5,8 @@ package scripts
 
 type ProjectileCell struct {
 	Projectiles []*Projectile
+	X           int
+	Y           int
 }
 
 type ProjectileGrid struct {
@@ -24,12 +26,20 @@ func NewProjectileGrid(cellSize int) *ProjectileGrid {
 func (pg *ProjectileGrid) GetCell(pos *Vec2) *ProjectileCell {
 	cellX := int(pos.X) / pg.CellSize
 	cellY := int(pos.Y) / pg.CellSize
-	if pg.Cells[cellX] != nil {
+	if pg.Cells[cellX] != nil && pg.Cells[cellX][cellY] != nil {
 		return pg.Cells[cellX][cellY]
 	} else {
-		pg.Cells[cellX] = make(map[int]*ProjectileCell)
-		pg.Cells[cellX][cellY] = &ProjectileCell{}
-		return pg.Cells[cellX][cellY]
+		newCell := &ProjectileCell{
+			X: cellX,
+			Y: cellY,
+		}
+
+		if pg.Cells[cellX] == nil {
+			pg.Cells[cellX] = make(map[int]*ProjectileCell)
+		}
+
+		pg.Cells[cellX][cellY] = newCell
+		return newCell
 	}
 }
 
@@ -69,21 +79,21 @@ func (pg *ProjectileGrid) GetSurroundingProjectiles(pos *Vec2, radius int) []*Pr
 		radius: The distance around the position to check
 	*/
 	var projectiles []*Projectile
-	radiusInCells := radius / pg.CellSize
-	centerX := int(pos.X) / pg.CellSize
-	centerY := int(pos.Y) / pg.CellSize
 
-	topLeftX := centerX - radiusInCells - 1
-	topLeftY := centerY - radiusInCells - 1
-	bottomRightX := centerX + radiusInCells + 1
-	bottomRightY := centerY + radiusInCells + 1
+	centerCell := pg.GetCell(pos)
 
-	for x := topLeftX; x <= bottomRightX; x++ {
-		for y := topLeftY; y <= bottomRightY; y++ {
-			if pg.Cells[x] == nil {
-				continue
-			}
+	radius = (radius / pg.CellSize) + 1
 
+	l := centerCell.X - radius
+	r := centerCell.X + radius
+	t := centerCell.Y - radius
+	b := centerCell.Y + radius
+
+	for x := l; x <= r; x++ {
+		if pg.Cells[x] == nil {
+			continue
+		}
+		for y := t; y <= b; y++ {
 			if cell := pg.Cells[x][y]; cell != nil {
 				projectiles = append(projectiles, cell.Projectiles...)
 			}

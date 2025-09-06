@@ -60,7 +60,7 @@ func NewSkeletonEnemy(pos *Vec2) *Enemy {
 
 	colliders := []Collider{}
 	// top colliders
-	colliderRadius := float32(8)
+	colliderRadius := float32(10)
 	colliders = append(colliders, Collider{radius: colliderRadius, offsetPosition: &Vec2{X: leftColliderX, Y: topColliderY}})
 	colliders = append(colliders, Collider{radius: colliderRadius, offsetPosition: &Vec2{X: leftColliderX + colliderGapX, Y: topColliderY}})
 	colliders = append(colliders, Collider{radius: colliderRadius, offsetPosition: &Vec2{X: leftColliderX + colliderGapX*2, Y: topColliderY}})
@@ -87,12 +87,12 @@ func (e *Enemy) IsDead() bool {
 func (e *Enemy) Update(dt float32, player *Player) {
 	dtMs := time.Duration(dt*1000) * time.Millisecond
 
-	// surroundingProjectiles := player.ProjectileGrid.GetSurroundingProjectiles(e.Pos, int(e.Width*2))
+	surroundingProjectiles := player.ProjectileGrid.GetSurroundingProjectiles(e.Pos, int(e.Width)*2)
 	// hack, get raw list of projectiles from player weapons
-	var surroundingProjectiles []*Projectile
-	for _, weapon := range player.Weapons {
-		surroundingProjectiles = append(surroundingProjectiles, weapon.Projectiles...)
-	}
+	// var surroundingProjectiles []*Projectile
+	// for _, weapon := range player.Weapons {
+	// 	surroundingProjectiles = append(surroundingProjectiles, weapon.Projectiles...)
+	// }
 
 	knockbackVector := &Vec2{X: 0, Y: 0}
 	for _, proj := range surroundingProjectiles {

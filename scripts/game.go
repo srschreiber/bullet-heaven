@@ -115,10 +115,10 @@ var GameInstance *Game
 
 func (g *Game) Update() error {
 	dt := float32(1.0 / TargetTPS)
-	g.Player.Update(dt)
 	for _, enemy := range AllEnemies {
 		enemy.Update(dt, &g.Player)
 	}
+	g.Player.Update(dt)
 	return nil
 }
 
@@ -146,7 +146,11 @@ func (g *Game) drawScene(dst *ebiten.Image) {
 		// now move to center
 		dst.DrawImage(enemy.WalkAnimator.GetCurrentFrame(), op)
 		// draw a little dot to denote enemy position
-		ebitenutil.DrawRect(dst, float64(enemy.Pos.X)-2, float64(enemy.Pos.Y)-2, 4, 4, color.RGBA{255, 0, 0, 255})
+		//ebitenutil.DrawRect(dst, float64(enemy.Pos.X)-2, float64(enemy.Pos.Y)-2, 4, 4, color.RGBA{255, 0, 0, 255})
+		// draw colliders as red rect
+		for _, collider := range enemy.Colliders {
+			ebitenutil.DrawRect(dst, float64(enemy.Pos.X)+float64(collider.offsetPosition.X), float64(enemy.Pos.Y)+float64(collider.offsetPosition.Y), float64(4), float64(4), color.RGBA{255, 0, 0, 255})
+		}
 	}
 
 	// player (16x16 square)
@@ -270,7 +274,7 @@ func StartGame() {
 
 	earthWeapon := Weapon{
 		CooldownSec:        defaultCooldown,
-		Projectiles:        []Projectile{},
+		Projectiles:        []*Projectile{},
 		ProjectileInstance: &earthProjectile,
 		LastDir:            &Vec2{0.5, 0.5},
 		ParticleEmitter:    NewSmokeEmitter(earthImage, 20000, .1, 1),
@@ -287,7 +291,7 @@ func StartGame() {
 
 	fireWeapon := Weapon{
 		CooldownSec:        defaultCooldown,
-		Projectiles:        []Projectile{},
+		Projectiles:        []*Projectile{},
 		ProjectileInstance: &fireProjectile,
 		LastDir:            &Vec2{0.5, 0.5},
 		ParticleEmitter:    NewSmokeEmitter(fireImage, 20000, .1, .5),
@@ -304,7 +308,7 @@ func StartGame() {
 
 	smokeWeapon := Weapon{
 		CooldownSec:        defaultCooldown,
-		Projectiles:        []Projectile{},
+		Projectiles:        []*Projectile{},
 		ProjectileInstance: &smokeProjectile,
 		LastDir:            &Vec2{0.5, 0.5},
 		ParticleEmitter:    NewSmokeEmitter(smokeImage, 20000, .1, 1),

@@ -14,7 +14,7 @@ type Projectile struct {
 type Weapon struct {
 	CooldownSec        float32
 	TimeSinceFire      float32
-	Projectiles        []Projectile
+	Projectiles        []*Projectile
 	ProjectileInstance *Projectile
 	LastDir            *Vec2 // remembers last fire direction if aiming is zero
 	ParticleEmitter    *SmokeEmitter

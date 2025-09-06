@@ -121,8 +121,9 @@ func (p *Player) Update(dt float32) {
 		// move + cull + emit smoke
 		newProjectiles := w.Projectiles[:0]
 		for j := range w.Projectiles {
-			pr := &w.Projectiles[j]
+			pr := w.Projectiles[j]
 
+			oldPos := pr.Pos
 			// integrate motion
 			pr.Pos = pr.Pos.Add(pr.Dir.Mul(pr.Speed * dt))
 
@@ -130,8 +131,8 @@ func (p *Player) Update(dt float32) {
 
 			// keep if on-screen
 			if p.Pos.IsInBounds(GameInstance.ScreenWidth, GameInstance.ScreenHeight, 0) && pr.Gas > 0 {
-				newProjectiles = append(newProjectiles, *pr)
-				p.ProjectileGrid.MoveProjectile(pr)
+				newProjectiles = append(newProjectiles, pr)
+				p.ProjectileGrid.MoveProjectile(pr, oldPos)
 			} else {
 				p.ProjectileGrid.RemoveProjectile(pr)
 			}
@@ -156,8 +157,10 @@ func (p *Player) Update(dt float32) {
 			randomizedVec = randomizedVec.Norm().Mul(.1)
 			newProj.Dir = newProj.Dir.Add(randomizedVec).Norm()
 
-			w.Projectiles = append(w.Projectiles, newProj)
+			w.Projectiles = append(w.Projectiles, &newProj)
 			w.LastDir = p.AimDirection.Norm()
+
+			p.ProjectileGrid.AddProjectile(&newProj)
 
 		}
 		// Add the new projectile to the grid

@@ -33,8 +33,8 @@ func (pg *ProjectileGrid) GetCell(pos *Vec2) *ProjectileCell {
 	}
 }
 
-func (pg *ProjectileGrid) MoveProjectile(p *Projectile) {
-	oldCell := pg.ProjectileToCell[p]
+func (pg *ProjectileGrid) MoveProjectile(p *Projectile, oldPos *Vec2) {
+	oldCell := pg.GetCell(oldPos)
 	newCell := pg.GetCell(p.Pos)
 	if oldCell != newCell {
 		pg.RemoveProjectile(p)
@@ -63,20 +63,20 @@ func (pg *ProjectileGrid) RemoveProjectile(p *Projectile) {
 	}
 }
 
-func (pg *ProjectileGrid) GetSurroundingCells(pos Vec2, radius int) []*ProjectileCell {
+func (pg *ProjectileGrid) GetSurroundingProjectiles(pos *Vec2, radius int) []*Projectile {
 	/*
 		pos: The position to check for projectiles
 		radius: The distance around the position to check
 	*/
-	var cells []*ProjectileCell
-	radiusInCells := radius/pg.CellSize + 1
+	var projectiles []*Projectile
+	radiusInCells := radius / pg.CellSize
 	centerX := int(pos.X) / pg.CellSize
 	centerY := int(pos.Y) / pg.CellSize
 
-	topLeftX := centerX - radiusInCells
-	topLeftY := centerY - radiusInCells
-	bottomRightX := centerX + radiusInCells
-	bottomRightY := centerY + radiusInCells
+	topLeftX := centerX - radiusInCells - 1
+	topLeftY := centerY - radiusInCells - 1
+	bottomRightX := centerX + radiusInCells + 1
+	bottomRightY := centerY + radiusInCells + 1
 
 	for x := topLeftX; x <= bottomRightX; x++ {
 		for y := topLeftY; y <= bottomRightY; y++ {
@@ -85,10 +85,10 @@ func (pg *ProjectileGrid) GetSurroundingCells(pos Vec2, radius int) []*Projectil
 			}
 
 			if cell := pg.Cells[x][y]; cell != nil {
-				cells = append(cells, cell)
+				projectiles = append(projectiles, cell.Projectiles...)
 			}
 		}
 	}
 
-	return cells
+	return projectiles
 }

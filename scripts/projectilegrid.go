@@ -34,8 +34,12 @@ func (pg *ProjectileGrid) GetCell(pos *Vec2) *ProjectileCell {
 }
 
 func (pg *ProjectileGrid) MoveProjectile(p *Projectile) {
-	pg.RemoveProjectile(p)
-	pg.AddProjectile(p)
+	oldCell := pg.ProjectileToCell[p]
+	newCell := pg.GetCell(p.Pos)
+	if oldCell != newCell {
+		pg.RemoveProjectile(p)
+		pg.AddProjectile(p)
+	}
 }
 
 func (pg *ProjectileGrid) AddProjectile(p *Projectile) {

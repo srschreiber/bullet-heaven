@@ -27,6 +27,7 @@ type Player struct {
 	StrifeMultiplier     float32
 	StrifeDecay          float32 // loss of speed
 	Width                float32
+	ProjectileGrid       *ProjectileGrid
 }
 
 func (p *Player) Update(dt float32) {
@@ -120,18 +121,22 @@ func (p *Player) Update(dt float32) {
 		// move + cull + emit smoke
 		newProjectiles := w.Projectiles[:0]
 		for j := range w.Projectiles {
-			p := &w.Projectiles[j]
+			pr := &w.Projectiles[j]
 
 			// integrate motion
-			p.Pos = p.Pos.Add(p.Dir.Mul(p.Speed * dt))
+			pr.Pos = pr.Pos.Add(pr.Dir.Mul(pr.Speed * dt))
 
-			w.ParticleEmitter.EmitDirectional(p.Pos, p.Dir, 2, p.Speed)
+			w.ParticleEmitter.EmitDirectional(pr.Pos, pr.Dir, 2, pr.Speed)
 
 			// keep if on-screen
-			if p.Pos.IsInBounds(GameInstance.ScreenWidth, GameInstance.ScreenHeight, 0) && p.Gas > 0 {
-				newProjectiles = append(newProjectiles, *p)
+			if p.Pos.IsInBounds(GameInstance.ScreenWidth, GameInstance.ScreenHeight, 0) && pr.Gas > 0 {
+				newProjectiles = append(newProjectiles, *pr)
+				p.ProjectileGrid.MoveProjectile(pr)
+			} else {
+				p.ProjectileGrid.RemoveProjectile(pr)
 			}
-			p.Gas -= dt * p.Speed
+			pr.Gas -= dt * pr.Speed
+
 		}
 		w.Projectiles = newProjectiles
 
@@ -155,6 +160,7 @@ func (p *Player) Update(dt float32) {
 			w.LastDir = p.AimDirection.Norm()
 
 		}
+		// Add the new projectile to the grid
 		w.ParticleEmitter.Update(dt)
 	}
 

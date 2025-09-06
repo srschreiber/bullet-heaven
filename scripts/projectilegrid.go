@@ -13,6 +13,14 @@ type ProjectileGrid struct {
 	ProjectileToCell map[*Projectile]*ProjectileCell
 }
 
+func NewProjectileGrid(cellSize int) *ProjectileGrid {
+	return &ProjectileGrid{
+		CellSize:         cellSize,
+		Cells:            make(map[int]map[int]*ProjectileCell),
+		ProjectileToCell: make(map[*Projectile]*ProjectileCell),
+	}
+}
+
 func (pg *ProjectileGrid) GetCell(pos *Vec2) *ProjectileCell {
 	cellX := int(pos.X) / pg.CellSize
 	cellY := int(pos.Y) / pg.CellSize
@@ -23,6 +31,11 @@ func (pg *ProjectileGrid) GetCell(pos *Vec2) *ProjectileCell {
 		pg.Cells[cellX][cellY] = &ProjectileCell{}
 		return pg.Cells[cellX][cellY]
 	}
+}
+
+func (pg *ProjectileGrid) MoveProjectile(p *Projectile) {
+	pg.RemoveProjectile(p)
+	pg.AddProjectile(p)
 }
 
 func (pg *ProjectileGrid) AddProjectile(p *Projectile) {

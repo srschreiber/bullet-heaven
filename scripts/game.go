@@ -333,6 +333,7 @@ func StartGame() {
 		LastStrife:           time.Now(),
 		StrifeTime:           0, // current time left in strife
 		Width:                64,
+		ProjectileGrid:       NewProjectileGrid(64 / 4),
 	}
 
 	// -- Set up animators --
